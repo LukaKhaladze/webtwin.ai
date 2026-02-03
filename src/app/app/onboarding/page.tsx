@@ -24,8 +24,9 @@ export default function Page() {
   }, [domain]);
 
   const appDomain =
-    process.env.NEXT_PUBLIC_APP_DOMAIN ||
-    (typeof window !== "undefined" ? window.location.origin : "https://YOUR_APP_DOMAIN");
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_APP_DOMAIN || "https://YOUR_APP_DOMAIN";
 
   const snippet = `<script async src="${appDomain}/rum.js" data-site="${domain || "yourdomain.com"}" data-endpoint="${appDomain}/api/rum"></script>`;
 
