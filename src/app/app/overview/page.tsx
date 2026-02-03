@@ -58,7 +58,7 @@ export default function OverviewPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Overview</p>
         <h1 className="mt-3 text-3xl font-semibold text-white">Twin health snapshot</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          Real-time metrics from RUM events (last 200 hits).
+          Live metrics from RUM events (last 200 hits).
         </p>
       </header>
 
