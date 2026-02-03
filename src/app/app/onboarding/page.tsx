@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const STEP_LABELS = [
   "Website",
@@ -16,6 +16,8 @@ export default function Page() {
   const [setupMethod, setSetupMethod] = useState<SetupMethod>("snippet");
   const [analyticsConnected, setAnalyticsConnected] = useState(false);
   const [buildStatus, setBuildStatus] = useState<"idle" | "building" | "ready">("idle");
+  const initialAppDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "https://YOUR_APP_DOMAIN";
+  const [appDomain, setAppDomain] = useState(initialAppDomain);
 
   const dnsToken = useMemo(() => {
     if (!domain) return "tw-verify-xxxxxxxx";
@@ -23,10 +25,9 @@ export default function Page() {
     return `tw-verify-${sanitized.replace(/[^a-z0-9-]/g, "").slice(0, 16) || "token"}`;
   }, [domain]);
 
-  const appDomain =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : process.env.NEXT_PUBLIC_APP_DOMAIN || "https://YOUR_APP_DOMAIN";
+  useEffect(() => {
+    setAppDomain(window.location.origin);
+  }, []);
 
   const snippet = `<script async src="${appDomain}/rum.js" data-site="${domain || "yourdomain.com"}" data-endpoint="${appDomain}/api/rum"></script>`;
 
