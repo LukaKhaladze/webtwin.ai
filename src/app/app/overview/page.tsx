@@ -1,31 +1,56 @@
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+"use client";
 
-export const revalidate = 30;
+import { useEffect, useMemo, useState } from "react";
+
+type OverviewTotals = {
+  pageviews: number;
+  uniquePages: number;
+  domContentLoadedAvg: number;
+  loadAvg: number;
+};
+
+type OverviewEvent = {
+  url: string | null;
+  vitals: { domContentLoaded?: number; load?: number } | null;
+};
+
+type OverviewResponse = {
+  totals: OverviewTotals;
+  events: OverviewEvent[];
+};
 
 function formatNumber(value: number, suffix = "") {
-  if (Number.isNaN(value)) return "-";
+  if (!Number.isFinite(value)) return "-";
   return `${value.toFixed(1)}${suffix}`;
 }
 
-export default async function OverviewPage() {
-  const supabase = getSupabaseServerClient();
+export default function OverviewPage() {
+  const [data, setData] = useState<OverviewResponse | null>(null);
 
-  const { data: events } = await supabase
-    .from("rum_events")
-    .select("url, vitals, ts")
-    .order("ts", { ascending: false })
-    .limit(200);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/overview")
+      .then((res) => res.json())
+      .then((json) => {
+        if (active) setData(json as OverviewResponse);
+      })
+      .catch(() => {
+        if (active) setData({ totals: { pageviews: 0, uniquePages: 0, domContentLoadedAvg: 0, loadAvg: 0 }, events: [] });
+      });
 
-  const totalEvents = events?.length ?? 0;
-  const uniquePages = new Set(events?.map((event) => event.url).filter(Boolean)).size;
-  const domContentLoadedAvg =
-    events && events.length
-      ? events.reduce((acc, event) => acc + ((event.vitals as any)?.domContentLoaded ?? 0), 0) / events.length
-      : 0;
-  const loadAvg =
-    events && events.length
-      ? events.reduce((acc, event) => acc + ((event.vitals as any)?.load ?? 0), 0) / events.length
-      : 0;
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const totals = data?.totals ?? {
+    pageviews: 0,
+    uniquePages: 0,
+    domContentLoadedAvg: 0,
+    loadAvg: 0,
+  };
+
+  const rows = useMemo(() => data?.events ?? [], [data]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -40,19 +65,23 @@ export default async function OverviewPage() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Pageviews</p>
-          <div className="mt-3 text-2xl font-semibold text-white">{totalEvents}</div>
+          <div className="mt-3 text-2xl font-semibold text-white">{totals.pageviews}</div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Unique pages</p>
-          <div className="mt-3 text-2xl font-semibold text-white">{uniquePages}</div>
+          <div className="mt-3 text-2xl font-semibold text-white">{totals.uniquePages}</div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">DCL (avg)</p>
-          <div className="mt-3 text-2xl font-semibold text-white">{formatNumber(domContentLoadedAvg / 1000, "s")}</div>
+          <div className="mt-3 text-2xl font-semibold text-white">
+            {formatNumber(totals.domContentLoadedAvg / 1000, "s")}
+          </div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Load (avg)</p>
-          <div className="mt-3 text-2xl font-semibold text-white">{formatNumber(loadAvg / 1000, "s")}</div>
+          <div className="mt-3 text-2xl font-semibold text-white">
+            {formatNumber(totals.loadAvg / 1000, "s")}
+          </div>
         </div>
       </section>
 
@@ -68,13 +97,25 @@ export default async function OverviewPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {(events ?? []).slice(0, 8).map((event, idx) => (
-                <tr key={`${event.url}-${idx}`} className="bg-slate-900">
-                  <td className="px-4 py-3 text-slate-200">{event.url}</td>
-                  <td className="px-4 py-3">{formatNumber(((event.vitals as any)?.domContentLoaded ?? 0) / 1000, "s")}</td>
-                  <td className="px-4 py-3">{formatNumber(((event.vitals as any)?.load ?? 0) / 1000, "s")}</td>
+              {rows.length === 0 ? (
+                <tr className="bg-slate-900">
+                  <td className="px-4 py-4 text-slate-400" colSpan={3}>
+                    No events yet. Add the snippet to start collecting data.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                rows.map((event, idx) => (
+                  <tr key={`${event.url ?? "event"}-${idx}`} className="bg-slate-900">
+                    <td className="px-4 py-3 text-slate-200">{event.url ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      {formatNumber(((event.vitals as any)?.domContentLoaded ?? 0) / 1000, "s")}
+                    </td>
+                    <td className="px-4 py-3">
+                      {formatNumber(((event.vitals as any)?.load ?? 0) / 1000, "s")}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
