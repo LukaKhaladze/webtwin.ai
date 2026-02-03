@@ -23,7 +23,11 @@ export default function Page() {
     return `tw-verify-${sanitized.replace(/[^a-z0-9-]/g, "").slice(0, 16) || "token"}`;
   }, [domain]);
 
-  const snippet = `<script async src="https://YOUR_APP_DOMAIN/rum.js" data-site="${domain || "yourdomain.com"}" data-endpoint="https://YOUR_APP_DOMAIN/api/rum"></script>`;
+  const appDomain =
+    process.env.NEXT_PUBLIC_APP_DOMAIN ||
+    (typeof window !== "undefined" ? window.location.origin : "https://YOUR_APP_DOMAIN");
+
+  const snippet = `<script async src="${appDomain}/rum.js" data-site="${domain || "yourdomain.com"}" data-endpoint="${appDomain}/api/rum"></script>`;
 
   const canBuild = domain.length > 3 && buildStatus !== "building";
 
