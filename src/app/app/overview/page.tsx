@@ -26,16 +26,25 @@ function formatNumber(value: number, suffix = "") {
 
 export default function OverviewPage() {
   const [data, setData] = useState<OverviewResponse | null>(null);
+  const [sending, setSending] = useState(false);
+  const [lastStatus, setLastStatus] = useState<"idle" | "sent" | "error">("idle");
 
-  useEffect(() => {
-    let active = true;
+  const fetchOverview = () =>
     fetch("/api/overview")
       .then((res) => res.json())
       .then((json) => {
-        if (active) setData(json as OverviewResponse);
-      })
+        setData(json as OverviewResponse);
+      });
+
+  useEffect(() => {
+    let active = true;
+    fetchOverview()
       .catch(() => {
-        if (active) setData({ totals: { pageviews: 0, uniquePages: 0, domContentLoadedAvg: 0, loadAvg: 0 }, events: [] });
+        if (active)
+          setData({
+            totals: { pageviews: 0, uniquePages: 0, domContentLoadedAvg: 0, loadAvg: 0 },
+            events: [],
+          });
       });
 
     return () => {
@@ -52,14 +61,54 @@ export default function OverviewPage() {
 
   const rows = useMemo(() => data?.events ?? [], [data]);
 
+  const handleSendTest = async () => {
+    try {
+      setSending(true);
+      setLastStatus("idle");
+      const res = await fetch("/api/rum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "pageview",
+          site: window.location.hostname,
+          url: window.location.href,
+          referrer: document.referrer || null,
+          userAgent: navigator.userAgent,
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+          vitals: { domContentLoaded: 1200, load: 2100 },
+          ts: Date.now(),
+        }),
+      });
+      if (!res.ok) throw new Error("send_failed");
+      await fetchOverview();
+      setLastStatus("sent");
+    } catch (err) {
+      setLastStatus("error");
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <header className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Overview</p>
         <h1 className="mt-3 text-3xl font-semibold text-white">Twin health snapshot</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          Live metrics from RUM events (last 200 hits).
-        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-300">
+          <span>Live metrics from RUM events (last 200 hits).</span>
+          <button
+            type="button"
+            onClick={handleSendTest}
+            disabled={sending}
+            className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+              sending ? "bg-slate-800 text-slate-500" : "bg-emerald-500 text-slate-900 hover:bg-emerald-400"
+            }`}
+          >
+            {sending ? "Sending..." : "Send test event"}
+          </button>
+          {lastStatus === "sent" && <span className="text-xs text-emerald-300">Event sent.</span>}
+          {lastStatus === "error" && <span className="text-xs text-rose-300">Send failed.</span>}
+        </div>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
