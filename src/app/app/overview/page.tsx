@@ -69,6 +69,14 @@ function impactClasses(impact: Recommendation["impact"]) {
   return "bg-emerald-500/20 text-emerald-200";
 }
 
+type ConfidenceLevel = "high" | "medium" | "low";
+
+function confidenceChipClasses(level: ConfidenceLevel) {
+  if (level === "high") return "bg-emerald-500/20 text-emerald-200 border-emerald-500/30";
+  if (level === "medium") return "bg-amber-500/20 text-amber-200 border-amber-500/30";
+  return "bg-rose-500/20 text-rose-200 border-rose-500/30";
+}
+
 export default function OverviewPage() {
   const [siteInput, setSiteInput] = useState("");
   const [siteFilter, setSiteFilter] = useState("");
@@ -116,6 +124,11 @@ export default function OverviewPage() {
 
   const rows = useMemo(() => overview?.events ?? [], [overview]);
 
+  const rumConfidence: ConfidenceLevel = rows.length >= 10 ? "high" : rows.length >= 3 ? "medium" : "low";
+  const lighthouseConfidence: ConfidenceLevel =
+    siteHealth?.lighthouse.mobile.performance != null || siteHealth?.lighthouse.desktop.performance != null ? "medium" : "low";
+  const uptimeConfidence: ConfidenceLevel = siteHealth?.uptime.checkedAt ? "high" : "low";
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalized = siteInput.trim().toLowerCase();
@@ -155,7 +168,12 @@ export default function OverviewPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Performance</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Performance</p>
+            <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase ${confidenceChipClasses(lighthouseConfidence)}`}>
+              {lighthouseConfidence} confidence
+            </span>
+          </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Mobile</p>
@@ -168,7 +186,12 @@ export default function OverviewPage() {
           </div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Accessibility</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Accessibility</p>
+            <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase ${confidenceChipClasses(lighthouseConfidence)}`}>
+              {lighthouseConfidence} confidence
+            </span>
+          </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Mobile</p>
@@ -181,7 +204,12 @@ export default function OverviewPage() {
           </div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Best Practices</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Best Practices</p>
+            <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase ${confidenceChipClasses(lighthouseConfidence)}`}>
+              {lighthouseConfidence} confidence
+            </span>
+          </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Mobile</p>
@@ -194,7 +222,12 @@ export default function OverviewPage() {
           </div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">SEO</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">SEO</p>
+            <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase ${confidenceChipClasses(lighthouseConfidence)}`}>
+              {lighthouseConfidence} confidence
+            </span>
+          </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Mobile</p>
@@ -210,7 +243,12 @@ export default function OverviewPage() {
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Load Time</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Load Time</p>
+            <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase ${confidenceChipClasses(lighthouseConfidence)}`}>
+              {lighthouseConfidence} confidence
+            </span>
+          </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Mobile</p>
@@ -228,7 +266,12 @@ export default function OverviewPage() {
           <p className="mt-2 text-sm text-slate-400">Estimated homepage load time (synthetic scan).</p>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Uptime / Downtime</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Uptime / Downtime</p>
+            <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase ${confidenceChipClasses(uptimeConfidence)}`}>
+              {uptimeConfidence} confidence
+            </span>
+          </div>
           <p className="mt-2 text-2xl font-semibold text-white">
             {siteHealth?.uptime.isUp == null ? "--" : siteHealth.uptime.isUp ? "UP" : "DOWN"}
           </p>
@@ -307,7 +350,12 @@ export default function OverviewPage() {
       )}
 
       <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-        <h2 className="text-lg font-semibold text-white">Latest Captured Events</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold text-white">Latest Captured Events</h2>
+          <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase ${confidenceChipClasses(rumConfidence)}`}>
+            {rumConfidence} confidence
+          </span>
+        </div>
         <div className="mt-4 overflow-hidden rounded-2xl border border-slate-800">
           <table className="w-full text-left text-sm text-slate-300">
             <thead className="bg-slate-950 text-xs uppercase tracking-[0.2em] text-slate-500">
