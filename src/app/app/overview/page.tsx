@@ -83,7 +83,7 @@ export default function OverviewPage() {
   const [siteHealth, setSiteHealth] = useState<SiteHealthResponse | null>(null);
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [scanStatus, setScanStatus] = useState<string>("");
+  const [scanStatus, setScanStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const fetchOverview = (site: string) => {
     const query = site ? `?site=${encodeURIComponent(site)}` : "";
@@ -111,11 +111,19 @@ export default function OverviewPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ site, strategy: "both" }),
         });
-        const dispatchJson = (await dispatchRes.json().catch(() => ({}))) as { error?: string; status?: string };
+        const dispatchJson = (await dispatchRes.json().catch(() => ({}))) as { error?: string; status?: string; site?: string };
         if (!dispatchRes.ok) {
-          setScanStatus(dispatchJson.error || "Failed to queue Lighthouse scan.");
+          setScanStatus({
+            type: "error",
+            message: dispatchJson.error || "Failed to queue Lighthouse scan.",
+          });
         } else {
-          setScanStatus("Lighthouse scan queued (mobile + desktop). Refresh in 1-2 minutes.");
+          const dispatchedSite = dispatchJson.site || site;
+          const at = new Date().toLocaleTimeString();
+          setScanStatus({
+            type: "success",
+            message: `Workflow dispatched for ${dispatchedSite} at ${at} (mobile + desktop). Refresh in 1-2 minutes.`,
+          });
         }
       }
       await Promise.all([fetchOverview(site), fetchSiteHealth(site)]);
@@ -178,7 +186,9 @@ export default function OverviewPage() {
         <p className="mt-3 text-sm text-slate-300">
           Exact scanned page: <span className="font-medium text-white">{siteHealth?.scanUrl || "--"}</span>
         </p>
-        {scanStatus && <p className="mt-2 text-xs text-emerald-300">{scanStatus}</p>}
+        {scanStatus && (
+          <p className={`mt-2 text-xs ${scanStatus.type === "error" ? "text-rose-300" : "text-emerald-300"}`}>{scanStatus.message}</p>
+        )}
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
