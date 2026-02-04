@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 type OverviewTotals = {
   pageviews: number;
@@ -47,7 +46,6 @@ function getBrowserTimings() {
 }
 
 export default function OverviewPage() {
-  const searchParams = useSearchParams();
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [sending, setSending] = useState(false);
   const [lastStatus, setLastStatus] = useState<"idle" | "sent" | "error">("idle");
@@ -63,7 +61,7 @@ export default function OverviewPage() {
   };
 
   useEffect(() => {
-    const siteFromQuery = (searchParams.get("site") || "").trim();
+    const siteFromQuery = new URLSearchParams(window.location.search).get("site")?.trim() || "";
     if (siteFromQuery) {
       setSiteFilter(siteFromQuery);
       localStorage.setItem("webtwin.activeSite", siteFromQuery);
@@ -74,7 +72,7 @@ export default function OverviewPage() {
     if (savedSite) {
       setSiteFilter(savedSite);
     }
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     let active = true;
