@@ -23,6 +23,7 @@ type OverviewResponse = {
 type SiteHealthResponse = {
   lighthouse: {
     performance: number | null;
+    accessibility: number | null;
     seo: number | null;
     bestPractices: number | null;
   };
@@ -182,33 +183,42 @@ export default function OverviewPage() {
           <div className="mt-3 text-2xl font-semibold text-white">
             {formatScore(siteHealth?.lighthouse.performance ?? null)}
           </div>
-          <p className="mt-2 text-xs text-slate-400">Lighthouse mobile score</p>
+          <p className="mt-2 text-xs text-slate-400">Google Lighthouse: Performance (mobile)</p>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">SEO</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Accessibility</p>
           <div className="mt-3 text-2xl font-semibold text-white">
-            {formatScore(siteHealth?.lighthouse.seo ?? null)}
+            {formatScore(siteHealth?.lighthouse.accessibility ?? null)}
           </div>
-          <p className="mt-2 text-xs text-slate-400">Lighthouse mobile score</p>
+          <p className="mt-2 text-xs text-slate-400">Google Lighthouse: Accessibility (mobile)</p>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Best practices</p>
           <div className="mt-3 text-2xl font-semibold text-white">
             {formatScore(siteHealth?.lighthouse.bestPractices ?? null)}
           </div>
-          <p className="mt-2 text-xs text-slate-400">Lighthouse mobile score</p>
+          <p className="mt-2 text-xs text-slate-400">Google Lighthouse: Best Practices (mobile)</p>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Uptime</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">SEO</p>
           <div className="mt-3 text-2xl font-semibold text-white">
-            {siteHealth?.uptime.isUp === null ? "--" : siteHealth?.uptime.isUp ? "UP" : "DOWN"}
+            {formatScore(siteHealth?.lighthouse.seo ?? null)}
           </div>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-slate-400">Google Lighthouse: SEO (mobile)</p>
+        </div>
+      </section>
+      <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Uptime / Downtime</p>
+        <div className="mt-3 flex flex-wrap items-center gap-4">
+          <p className="text-2xl font-semibold text-white">
+            {siteHealth?.uptime.isUp === null ? "--" : siteHealth?.uptime.isUp ? "UP" : "DOWN"}
+          </p>
+          <p className="text-sm text-slate-300">
             {siteHealth?.uptime.responseMs
               ? `${siteHealth.uptime.responseMs}ms • HTTP ${siteHealth.uptime.statusCode ?? "-"}`
               : "Live check"}
           </p>
-          <p className="mt-1 text-[11px] text-slate-500">Downtime history: coming next</p>
+          <p className="text-xs text-slate-500">Downtime history: coming next</p>
         </div>
       </section>
       {siteHealth?.lighthouseSource?.startsWith("unavailable") && (

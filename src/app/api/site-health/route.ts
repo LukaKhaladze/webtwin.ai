@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export const runtime = "edge";
 
-type LighthouseCategory = "performance" | "seo" | "best-practices";
+type LighthouseCategory = "performance" | "accessibility" | "seo" | "best-practices";
 
 function normalizeSiteToUrl(site: string) {
   const trimmed = (site || "").trim();
@@ -76,26 +76,28 @@ export async function GET(request: Request) {
 
   if (!targetUrl) {
     return NextResponse.json({
-      lighthouse: { performance: null, seo: null, bestPractices: null },
+      lighthouse: { performance: null, accessibility: null, seo: null, bestPractices: null },
       uptime: { isUp: null, statusCode: null, responseMs: null, checkedAt: null },
     });
   }
 
-  const [performance, seo, bestPractices, uptime] = await Promise.all([
+  const [performance, accessibility, seo, bestPractices, uptime] = await Promise.all([
     fetchLighthouseScore(targetUrl, "performance"),
+    fetchLighthouseScore(targetUrl, "accessibility"),
     fetchLighthouseScore(targetUrl, "seo"),
     fetchLighthouseScore(targetUrl, "best-practices"),
     liveUptimeCheck(targetUrl),
   ]);
 
   const lighthouseSource =
-    performance === null && seo === null && bestPractices === null
+    performance === null && accessibility === null && seo === null && bestPractices === null
       ? "unavailable (likely API quota/rate limit or blocked target)"
       : "pagespeed";
 
   return NextResponse.json({
     lighthouse: {
       performance,
+      accessibility,
       seo,
       bestPractices,
     },
