@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type OverviewTotals = {
   pageviews: number;
@@ -10,6 +11,7 @@ type OverviewTotals = {
 };
 
 type OverviewEvent = {
+  site?: string | null;
   url: string | null;
   vitals: { domContentLoaded?: number; load?: number } | null;
 };
@@ -45,20 +47,38 @@ function getBrowserTimings() {
 }
 
 export default function OverviewPage() {
+  const searchParams = useSearchParams();
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [sending, setSending] = useState(false);
   const [lastStatus, setLastStatus] = useState<"idle" | "sent" | "error">("idle");
+  const [siteFilter, setSiteFilter] = useState("");
 
-  const fetchOverview = () =>
-    fetch("/api/overview")
+  const fetchOverview = (site = siteFilter) => {
+    const query = site ? `?site=${encodeURIComponent(site)}` : "";
+    return fetch(`/api/overview${query}`)
       .then((res) => res.json())
       .then((json) => {
         setData(json as OverviewResponse);
       });
+  };
+
+  useEffect(() => {
+    const siteFromQuery = (searchParams.get("site") || "").trim();
+    if (siteFromQuery) {
+      setSiteFilter(siteFromQuery);
+      localStorage.setItem("webtwin.activeSite", siteFromQuery);
+      return;
+    }
+
+    const savedSite = (localStorage.getItem("webtwin.activeSite") || "").trim();
+    if (savedSite) {
+      setSiteFilter(savedSite);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     let active = true;
-    fetchOverview()
+    fetchOverview(siteFilter)
       .catch(() => {
         if (active)
           setData({
@@ -70,7 +90,7 @@ export default function OverviewPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [siteFilter]);
 
   const totals = data?.totals ?? {
     pageviews: 0,
@@ -91,7 +111,7 @@ export default function OverviewPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "pageview",
-          site: window.location.hostname,
+          site: siteFilter || window.location.hostname,
           url: window.location.href,
           referrer: document.referrer || null,
           userAgent: navigator.userAgent,
@@ -101,7 +121,7 @@ export default function OverviewPage() {
         }),
       });
       if (!res.ok) throw new Error("send_failed");
-      await fetchOverview();
+      await fetchOverview(siteFilter);
       setLastStatus("sent");
     } catch (err) {
       setLastStatus("error");
@@ -117,6 +137,7 @@ export default function OverviewPage() {
         <h1 className="mt-3 text-3xl font-semibold text-white">Twin health snapshot</h1>
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-300">
           <span>Live metrics from RUM events (last 200 hits).</span>
+          {siteFilter && <span className="text-xs text-slate-400">Site: {siteFilter}</span>}
           <button
             type="button"
             onClick={handleSendTest}

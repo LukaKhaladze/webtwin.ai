@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const STEP_LABELS = [
   "Website",
@@ -12,6 +13,7 @@ const STEP_LABELS = [
 type SetupMethod = "snippet" | "dns";
 
 export default function Page() {
+  const router = useRouter();
   const [domain, setDomain] = useState("");
   const [setupMethod, setSetupMethod] = useState<SetupMethod>("snippet");
   const [analyticsConnected, setAnalyticsConnected] = useState(false);
@@ -36,7 +38,12 @@ export default function Page() {
   const handleStartBuild = () => {
     if (!canBuild) return;
     setBuildStatus("building");
-    window.setTimeout(() => setBuildStatus("ready"), 2000);
+    const cleanDomain = domain.trim().toLowerCase();
+    if (cleanDomain) {
+      localStorage.setItem("webtwin.activeSite", cleanDomain);
+    }
+    setBuildStatus("ready");
+    router.push(`/app/overview?site=${encodeURIComponent(cleanDomain || "yourdomain.com")}`);
   };
 
   return (

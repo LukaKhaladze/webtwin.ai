@@ -3,14 +3,22 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "edge";
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = getSupabaseServerClient();
+  const url = new URL(request.url);
+  const site = (url.searchParams.get("site") || "").trim();
 
-  const { data: events } = await supabase
+  let query = supabase
     .from("rum_events")
-    .select("url, vitals, ts")
+    .select("site, url, vitals, ts")
     .order("ts", { ascending: false })
     .limit(200);
+
+  if (site) {
+    query = query.eq("site", site);
+  }
+
+  const { data: events } = await query;
 
   const totalEvents = events?.length ?? 0;
   const uniquePages = new Set(events?.map((event) => event.url).filter(Boolean)).size;
