@@ -51,6 +51,12 @@ type SiteHealthResponse = {
     responseMs: number | null;
     checkedAt: string | null;
   };
+  robots: {
+    url: string | null;
+    exists: boolean;
+    valid: boolean;
+    statusCode: number;
+  };
 };
 
 function formatNumber(value: number, suffix = "") {
@@ -184,11 +190,11 @@ export default function OverviewPage() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2.5">
               <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Mobile</p>
-              <p className="mt-1 whitespace-nowrap text-[1.85rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.performance ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[1.55rem] leading-none font-semibold text-white sm:text-[1.7rem]">{formatScore(siteHealth?.lighthouse.mobile.performance ?? null)}</p>
             </div>
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2.5">
               <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Desktop</p>
-              <p className="mt-1 whitespace-nowrap text-[1.85rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.performance ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[1.55rem] leading-none font-semibold text-white sm:text-[1.7rem]">{formatScore(siteHealth?.lighthouse.desktop.performance ?? null)}</p>
             </div>
           </div>
         </div>
@@ -197,11 +203,11 @@ export default function OverviewPage() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2.5">
               <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Mobile</p>
-              <p className="mt-1 whitespace-nowrap text-[1.85rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.accessibility ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[1.55rem] leading-none font-semibold text-white sm:text-[1.7rem]">{formatScore(siteHealth?.lighthouse.mobile.accessibility ?? null)}</p>
             </div>
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2.5">
               <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Desktop</p>
-              <p className="mt-1 whitespace-nowrap text-[1.85rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.accessibility ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[1.55rem] leading-none font-semibold text-white sm:text-[1.7rem]">{formatScore(siteHealth?.lighthouse.desktop.accessibility ?? null)}</p>
             </div>
           </div>
         </div>
@@ -210,11 +216,11 @@ export default function OverviewPage() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2.5">
               <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Mobile</p>
-              <p className="mt-1 whitespace-nowrap text-[1.85rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.bestPractices ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[1.55rem] leading-none font-semibold text-white sm:text-[1.7rem]">{formatScore(siteHealth?.lighthouse.mobile.bestPractices ?? null)}</p>
             </div>
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2.5">
               <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Desktop</p>
-              <p className="mt-1 whitespace-nowrap text-[1.85rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.bestPractices ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[1.55rem] leading-none font-semibold text-white sm:text-[1.7rem]">{formatScore(siteHealth?.lighthouse.desktop.bestPractices ?? null)}</p>
             </div>
           </div>
         </div>
@@ -223,11 +229,11 @@ export default function OverviewPage() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2.5">
               <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Mobile</p>
-              <p className="mt-1 whitespace-nowrap text-[1.85rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.seo ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[1.55rem] leading-none font-semibold text-white sm:text-[1.7rem]">{formatScore(siteHealth?.lighthouse.mobile.seo ?? null)}</p>
             </div>
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2.5">
               <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Desktop</p>
-              <p className="mt-1 whitespace-nowrap text-[1.85rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.seo ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[1.55rem] leading-none font-semibold text-white sm:text-[1.7rem]">{formatScore(siteHealth?.lighthouse.desktop.seo ?? null)}</p>
             </div>
           </div>
         </div>
@@ -239,13 +245,13 @@ export default function OverviewPage() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2.5">
               <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Mobile</p>
-              <p className="mt-1 whitespace-nowrap text-[1.85rem] leading-none font-semibold text-white">
+              <p className="mt-1 whitespace-nowrap text-[1.55rem] leading-none font-semibold text-white sm:text-[1.7rem]">
                 {siteHealth?.homepageLoadSec.mobile == null ? "--" : `${siteHealth.homepageLoadSec.mobile}s`}
               </p>
             </div>
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-2.5">
               <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Desktop</p>
-              <p className="mt-1 whitespace-nowrap text-[1.85rem] leading-none font-semibold text-white">
+              <p className="mt-1 whitespace-nowrap text-[1.55rem] leading-none font-semibold text-white sm:text-[1.7rem]">
                 {siteHealth?.homepageLoadSec.desktop == null ? "--" : `${siteHealth.homepageLoadSec.desktop}s`}
               </p>
             </div>
@@ -288,6 +294,23 @@ export default function OverviewPage() {
 
         <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-5">
           <h2 className="text-[1.1rem] font-semibold text-white">SEO Problems & Recommendations</h2>
+          <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs">
+            <p className="text-slate-300">
+              Robots.txt:{" "}
+              {siteHealth?.robots.valid ? (
+                <span className="font-semibold text-emerald-300">Valid</span>
+              ) : siteHealth?.robots.exists ? (
+                <span className="font-semibold text-amber-300">Found, but parsing looks problematic</span>
+              ) : (
+                <span className="font-semibold text-rose-300">Not reachable</span>
+              )}
+            </p>
+            {siteHealth?.robots.url && (
+              <a className="mt-2 inline-block text-emerald-300 underline" href={siteHealth.robots.url} rel="noreferrer" target="_blank">
+                Open robots.txt
+              </a>
+            )}
+          </div>
           <ul className="mt-4 space-y-3 text-sm text-slate-300">
             {(siteHealth?.recommendations.seo ?? []).length === 0 && (
               <li className="text-slate-500">No critical SEO problems detected.</li>

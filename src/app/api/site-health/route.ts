@@ -40,6 +40,13 @@ type StrategySnapshot = {
   };
 };
 
+type RobotsStatus = {
+  url: string;
+  exists: boolean;
+  valid: boolean;
+  statusCode: number;
+};
+
 function normalizeSiteToUrl(site: string) {
   const trimmed = (site || "").trim();
   if (!trimmed) return "";
@@ -97,6 +104,42 @@ async function liveUptimeCheck(url: string) {
   }
 }
 
+async function checkRobotsTxt(url: string): Promise<RobotsStatus> {
+  const target = new URL(url);
+  const robotsUrl = `${target.protocol}//${target.hostname}/robots.txt`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const res = await fetch(robotsUrl, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+      headers: { "User-Agent": "WebTwinAI/1.0" },
+    });
+
+    const text = await res.text();
+    const hasUserAgent = /(^|\n)\s*user-agent\s*:/i.test(text);
+    const exists = res.status >= 200 && res.status < 300;
+
+    return {
+      url: robotsUrl,
+      exists,
+      valid: exists && hasUserAgent,
+      statusCode: res.status,
+    };
+  } catch {
+    return {
+      url: robotsUrl,
+      exists: false,
+      valid: false,
+      statusCode: 0,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function GET(request: Request) {
   const reqUrl = new URL(request.url);
   const site = (reqUrl.searchParams.get("site") || "").trim().toLowerCase();
@@ -105,12 +148,16 @@ export async function GET(request: Request) {
 
   if (!targetUrl) {
     return NextResponse.json({
-      lighthouse: { performance: null, accessibility: null, seo: null, bestPractices: null },
+      lighthouse: {
+        mobile: { performance: null, accessibility: null, seo: null, bestPractices: null },
+        desktop: { performance: null, accessibility: null, seo: null, bestPractices: null },
+      },
       lighthouseSource: "unavailable (missing site)",
       scanUrl: null,
-      homepageLoadSec: null,
+      homepageLoadSec: { mobile: null, desktop: null },
       recommendations: { performance: [], seo: [], uiux: [] },
       uptime: { isUp: null, statusCode: null, responseMs: null, checkedAt: null },
+      robots: { url: null, exists: false, valid: false, statusCode: 0 },
     });
   }
 
@@ -147,7 +194,12 @@ export async function GET(request: Request) {
   const desktop = mapRun(latestDesktop);
   const hasAnyRun = Boolean(latestMobile || latestDesktop);
   const selectedRecommendations = latestMobile ? mobile.recommendations : desktop.recommendations;
-  const uptime = await liveUptimeCheck(targetUrl);
+  const sanitizedSeoRecommendations = selectedRecommendations.seo.filter((rec) => {
+    const key = rec.key.toLowerCase();
+    const title = rec.title.toLowerCase();
+    return key !== "robots-txt" && !title.includes("robots.txt");
+  });
+  const [uptime, robots] = await Promise.all([liveUptimeCheck(targetUrl), checkRobotsTxt(targetUrl)]);
 
   return NextResponse.json({
     lighthouse: {
@@ -170,7 +222,12 @@ export async function GET(request: Request) {
       mobile: mobile.homepageLoadSec,
       desktop: desktop.homepageLoadSec,
     },
-    recommendations: selectedRecommendations,
+    recommendations: {
+      performance: selectedRecommendations.performance,
+      seo: robots.valid ? sanitizedSeoRecommendations : selectedRecommendations.seo,
+      uiux: selectedRecommendations.uiux,
+    },
     uptime,
+    robots,
   });
 }
