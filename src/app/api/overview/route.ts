@@ -20,15 +20,32 @@ export async function GET(request: Request) {
 
   const { data: events } = await query;
 
-  const totalEvents = events?.length ?? 0;
-  const uniquePages = new Set(events?.map((event) => event.url).filter(Boolean)).size;
+  const MAX_REASONABLE_MS = 120000;
+  const normalizedEvents = (events ?? []).map((event) => {
+    const vitals = (event.vitals as { domContentLoaded?: number; load?: number } | null) ?? null;
+    const dcl = Number(vitals?.domContentLoaded ?? 0);
+    const load = Number(vitals?.load ?? 0);
+
+    return {
+      ...event,
+      vitals: {
+        domContentLoaded: Number.isFinite(dcl) && dcl >= 0 && dcl <= MAX_REASONABLE_MS ? dcl : 0,
+        load: Number.isFinite(load) && load >= 0 && load <= MAX_REASONABLE_MS ? load : 0,
+      },
+    };
+  });
+
+  const totalEvents = normalizedEvents.length;
+  const uniquePages = new Set(normalizedEvents.map((event) => event.url).filter(Boolean)).size;
   const domContentLoadedAvg =
-    events && events.length
-      ? events.reduce((acc, event) => acc + ((event.vitals as any)?.domContentLoaded ?? 0), 0) / events.length
+    normalizedEvents.length
+      ? normalizedEvents.reduce((acc, event) => acc + ((event.vitals as any)?.domContentLoaded ?? 0), 0) /
+        normalizedEvents.length
       : 0;
   const loadAvg =
-    events && events.length
-      ? events.reduce((acc, event) => acc + ((event.vitals as any)?.load ?? 0), 0) / events.length
+    normalizedEvents.length
+      ? normalizedEvents.reduce((acc, event) => acc + ((event.vitals as any)?.load ?? 0), 0) /
+        normalizedEvents.length
       : 0;
 
   return NextResponse.json({
@@ -38,6 +55,6 @@ export async function GET(request: Request) {
       domContentLoadedAvg,
       loadAvg,
     },
-    events: (events ?? []).slice(0, 8),
+    events: normalizedEvents.slice(0, 8),
   });
 }

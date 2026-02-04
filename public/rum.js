@@ -25,10 +25,22 @@
   }
 
   function collectVitals() {
+    var navEntry = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+    if (navEntry) {
+      return {
+        domContentLoaded: Math.max(0, Math.round(navEntry.domContentLoadedEventEnd || 0)),
+        load: Math.max(0, Math.round(navEntry.loadEventEnd || 0)),
+      };
+    }
+
     var timing = performance.timing || {};
+    var navigationStart = timing.navigationStart || 0;
+    var domContentLoadedEventEnd = timing.domContentLoadedEventEnd || 0;
+    var loadEventEnd = timing.loadEventEnd || 0;
+
     return {
-      domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
-      load: timing.loadEventEnd - timing.navigationStart,
+      domContentLoaded: Math.max(0, domContentLoadedEventEnd - navigationStart),
+      load: Math.max(0, loadEventEnd - navigationStart),
     };
   }
 
