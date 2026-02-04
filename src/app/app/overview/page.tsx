@@ -182,52 +182,52 @@ export default function OverviewPage() {
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Performance</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Mobile</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.performance ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[2rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.performance ?? null)}</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Desktop</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.performance ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[2rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.performance ?? null)}</p>
             </div>
           </div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Accessibility</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Mobile</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.accessibility ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[2rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.accessibility ?? null)}</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Desktop</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.accessibility ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[2rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.accessibility ?? null)}</p>
             </div>
           </div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Best Practices</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Mobile</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.bestPractices ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[2rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.bestPractices ?? null)}</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Desktop</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.bestPractices ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[2rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.bestPractices ?? null)}</p>
             </div>
           </div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">SEO</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Mobile</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.seo ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[2rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.mobile.seo ?? null)}</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Desktop</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.seo ?? null)}</p>
+              <p className="mt-1 whitespace-nowrap text-[2rem] leading-none font-semibold text-white">{formatScore(siteHealth?.lighthouse.desktop.seo ?? null)}</p>
             </div>
           </div>
         </div>
@@ -237,15 +237,15 @@ export default function OverviewPage() {
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Load Time</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Mobile</p>
-              <p className="mt-1 text-2xl font-semibold text-white">
+              <p className="mt-1 whitespace-nowrap text-[2rem] leading-none font-semibold text-white">
                 {siteHealth?.homepageLoadSec.mobile == null ? "--" : `${siteHealth.homepageLoadSec.mobile}s`}
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-3">
               <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Desktop</p>
-              <p className="mt-1 text-2xl font-semibold text-white">
+              <p className="mt-1 whitespace-nowrap text-[2rem] leading-none font-semibold text-white">
                 {siteHealth?.homepageLoadSec.desktop == null ? "--" : `${siteHealth.homepageLoadSec.desktop}s`}
               </p>
             </div>
