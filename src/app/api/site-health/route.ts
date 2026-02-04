@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 
 export const runtime = "edge";
 
-type LighthouseCategory = "performance" | "accessibility" | "seo" | "best-practices";
-
 function normalizeSiteToUrl(site: string) {
   const trimmed = (site || "").trim();
   if (!trimmed) return "";
@@ -11,10 +9,9 @@ function normalizeSiteToUrl(site: string) {
   return `https://${trimmed}`;
 }
 
-async function fetchLighthouseScore(url: string, category: LighthouseCategory) {
+async function fetchLighthouseScores(url: string) {
   const apiUrl = new URL("https://www.googleapis.com/pagespeedonline/v5/runPagespeed");
   apiUrl.searchParams.set("url", url);
-  apiUrl.searchParams.set("category", category);
   apiUrl.searchParams.set("strategy", "mobile");
   if (process.env.PAGESPEED_API_KEY) {
     apiUrl.searchParams.set("key", process.env.PAGESPEED_API_KEY);
@@ -25,21 +22,57 @@ async function fetchLighthouseScore(url: string, category: LighthouseCategory) {
     headers: { "User-Agent": "WebTwinAI/1.0" },
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    return {
+      performance: null,
+      accessibility: null,
+      seo: null,
+      bestPractices: null,
+      source: `unavailable (${res.status})`,
+    };
+  }
+
   const json = (await res.json()) as {
     lighthouseResult?: {
-      categories?: Record<string, { score?: number }>;
+      categories?: {
+        performance?: { score?: number };
+        accessibility?: { score?: number };
+        seo?: { score?: number };
+        "best-practices"?: { score?: number };
+      };
+    };
+    error?: {
+      message?: string;
     };
   };
+  if (json.error?.message) {
+    return {
+      performance: null,
+      accessibility: null,
+      seo: null,
+      bestPractices: null,
+      source: `unavailable (${json.error.message})`,
+    };
+  }
 
-  const score = json.lighthouseResult?.categories?.[category]?.score;
-  if (typeof score !== "number") return null;
-  return Math.round(score * 100);
+  const categories = json.lighthouseResult?.categories;
+  const performance = categories?.performance?.score;
+  const accessibility = categories?.accessibility?.score;
+  const seo = categories?.seo?.score;
+  const bestPractices = categories?.["best-practices"]?.score;
+
+  return {
+    performance: typeof performance === "number" ? Math.round(performance * 100) : null,
+    accessibility: typeof accessibility === "number" ? Math.round(accessibility * 100) : null,
+    seo: typeof seo === "number" ? Math.round(seo * 100) : null,
+    bestPractices: typeof bestPractices === "number" ? Math.round(bestPractices * 100) : null,
+    source: "pagespeed",
+  };
 }
 
 async function liveUptimeCheck(url: string) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 7000);
+  const timeout = setTimeout(() => controller.abort(), 15000);
   const startedAt = Date.now();
 
   try {
@@ -77,31 +110,21 @@ export async function GET(request: Request) {
   if (!targetUrl) {
     return NextResponse.json({
       lighthouse: { performance: null, accessibility: null, seo: null, bestPractices: null },
+      lighthouseSource: "unavailable (missing site)",
       uptime: { isUp: null, statusCode: null, responseMs: null, checkedAt: null },
     });
   }
 
-  const [performance, accessibility, seo, bestPractices, uptime] = await Promise.all([
-    fetchLighthouseScore(targetUrl, "performance"),
-    fetchLighthouseScore(targetUrl, "accessibility"),
-    fetchLighthouseScore(targetUrl, "seo"),
-    fetchLighthouseScore(targetUrl, "best-practices"),
-    liveUptimeCheck(targetUrl),
-  ]);
-
-  const lighthouseSource =
-    performance === null && accessibility === null && seo === null && bestPractices === null
-      ? "unavailable (likely API quota/rate limit or blocked target)"
-      : "pagespeed";
+  const [lighthouse, uptime] = await Promise.all([fetchLighthouseScores(targetUrl), liveUptimeCheck(targetUrl)]);
 
   return NextResponse.json({
     lighthouse: {
-      performance,
-      accessibility,
-      seo,
-      bestPractices,
+      performance: lighthouse.performance,
+      accessibility: lighthouse.accessibility,
+      seo: lighthouse.seo,
+      bestPractices: lighthouse.bestPractices,
     },
-    lighthouseSource,
+    lighthouseSource: lighthouse.source,
     uptime,
   });
 }

@@ -223,7 +223,7 @@ export default function OverviewPage() {
       </section>
       {siteHealth?.lighthouseSource?.startsWith("unavailable") && (
         <p className="text-xs text-amber-300">
-          Lighthouse scores unavailable now. Add `PAGESPEED_API_KEY` in Vercel to reduce quota/rate-limit issues.
+          Lighthouse scores unavailable now: {siteHealth.lighthouseSource}. Check `PAGESPEED_API_KEY` and redeploy.
         </p>
       )}
 
