@@ -32,6 +32,24 @@ function normalizeSiteToUrl(site: string) {
   return `https://${trimmed}`;
 }
 
+function toSiteKeys(rawSite: string) {
+  const normalizedUrl = normalizeSiteToUrl(rawSite);
+  if (!normalizedUrl) return [];
+
+  try {
+    const hostname = new URL(normalizedUrl).hostname.toLowerCase();
+    const withoutWww = hostname.replace(/^www\./, "");
+    const withWww = hostname.startsWith("www.") ? hostname : `www.${hostname}`;
+    return Array.from(new Set([hostname, withoutWww, withWww]));
+  } catch {
+    const lowered = rawSite.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    if (!lowered) return [];
+    const withoutWww = lowered.replace(/^www\./, "");
+    const withWww = lowered.startsWith("www.") ? lowered : `www.${lowered}`;
+    return Array.from(new Set([lowered, withoutWww, withWww]));
+  }
+}
+
 async function liveUptimeCheck(url: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -67,6 +85,7 @@ async function liveUptimeCheck(url: string) {
 export async function GET(request: Request) {
   const reqUrl = new URL(request.url);
   const site = (reqUrl.searchParams.get("site") || "").trim().toLowerCase();
+  const siteKeys = toSiteKeys(site);
   const targetUrl = normalizeSiteToUrl(site);
 
   if (!targetUrl) {
@@ -86,7 +105,7 @@ export async function GET(request: Request) {
     .select(
       "site,strategy,performance,accessibility,seo,best_practices,homepage_load_sec,final_url,perf_recommendations,seo_recommendations,uiux_recommendations,checked_at"
     )
-    .eq("site", site)
+    .in("site", siteKeys.length ? siteKeys : [site])
     .eq("strategy", "mobile")
     .order("checked_at", { ascending: false })
     .limit(1)
