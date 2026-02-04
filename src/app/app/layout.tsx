@@ -2,11 +2,6 @@ import Link from "next/link";
 
 const navItems = [
   { href: "/app/overview", label: "Overview" },
-  { href: "/app/twin-map", label: "Twin Map" },
-  { href: "/app/insights", label: "Insights" },
-  { href: "/app/simulator", label: "Simulator" },
-  { href: "/app/reports", label: "Reports" },
-  { href: "/app/settings", label: "Settings" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

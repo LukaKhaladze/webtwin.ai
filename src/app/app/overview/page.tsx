@@ -1,13 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
-type OverviewTotals = {
-  pageviews: number;
-  uniquePages: number;
-  domContentLoadedAvg: number;
-  loadAvg: number;
-};
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type OverviewEvent = {
   site?: string | null;
@@ -16,8 +9,14 @@ type OverviewEvent = {
 };
 
 type OverviewResponse = {
-  totals: OverviewTotals;
   events: OverviewEvent[];
+};
+
+type Recommendation = {
+  key: string;
+  title: string;
+  detail: string;
+  impact: "high" | "medium" | "low";
 };
 
 type SiteHealthResponse = {
@@ -28,6 +27,13 @@ type SiteHealthResponse = {
     bestPractices: number | null;
   };
   lighthouseSource?: string;
+  scanUrl: string | null;
+  homepageLoadSec: number | null;
+  recommendations: {
+    performance: Recommendation[];
+    seo: Recommendation[];
+    uiux: Recommendation[];
+  };
   uptime: {
     isUp: boolean | null;
     statusCode: number | null;
@@ -46,189 +52,204 @@ function formatScore(value: number | null) {
   return `${value}/100`;
 }
 
-function getBrowserTimings() {
-  const navEntry = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
-  if (navEntry) {
-    return {
-      domContentLoaded: Math.max(0, Math.round(navEntry.domContentLoadedEventEnd)),
-      load: Math.max(0, Math.round(navEntry.loadEventEnd)),
-    };
-  }
-
-  const timing = performance.timing;
-  if (!timing || !timing.navigationStart) {
-    return { domContentLoaded: 0, load: 0 };
-  }
-
-  return {
-    domContentLoaded: Math.max(0, timing.domContentLoadedEventEnd - timing.navigationStart),
-    load: Math.max(0, timing.loadEventEnd - timing.navigationStart),
-  };
+function impactClasses(impact: Recommendation["impact"]) {
+  if (impact === "high") return "bg-rose-500/20 text-rose-200";
+  if (impact === "medium") return "bg-amber-500/20 text-amber-200";
+  return "bg-emerald-500/20 text-emerald-200";
 }
 
 export default function OverviewPage() {
-  const [data, setData] = useState<OverviewResponse | null>(null);
-  const [sending, setSending] = useState(false);
-  const [lastStatus, setLastStatus] = useState<"idle" | "sent" | "error">("idle");
+  const [siteInput, setSiteInput] = useState("");
   const [siteFilter, setSiteFilter] = useState("");
   const [siteHealth, setSiteHealth] = useState<SiteHealthResponse | null>(null);
+  const [overview, setOverview] = useState<OverviewResponse | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const fetchOverview = (site = siteFilter) => {
+  const fetchOverview = (site: string) => {
     const query = site ? `?site=${encodeURIComponent(site)}` : "";
     return fetch(`/api/overview${query}`)
       .then((res) => res.json())
-      .then((json) => {
-        setData(json as OverviewResponse);
-      });
+      .then((json) => setOverview(json as OverviewResponse));
   };
 
-  const fetchSiteHealth = (site = siteFilter) => {
+  const fetchSiteHealth = (site: string) => {
     const query = site ? `?site=${encodeURIComponent(site)}` : "";
     return fetch(`/api/site-health${query}`)
       .then((res) => res.json())
-      .then((json) => {
-        setSiteHealth(json as SiteHealthResponse);
-      });
+      .then((json) => setSiteHealth(json as SiteHealthResponse));
+  };
+
+  const runScan = async (site: string) => {
+    if (!site) return;
+    setLoading(true);
+    setSiteFilter(site);
+    localStorage.setItem("webtwin.activeSite", site);
+    try {
+      await Promise.all([fetchOverview(site), fetchSiteHealth(site)]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const siteFromQuery = new URLSearchParams(window.location.search).get("site")?.trim() || "";
-    if (siteFromQuery) {
-      setSiteFilter(siteFromQuery);
-      localStorage.setItem("webtwin.activeSite", siteFromQuery);
-      return;
-    }
-
-    const savedSite = (localStorage.getItem("webtwin.activeSite") || "").trim();
-    if (savedSite) {
-      setSiteFilter(savedSite);
-    }
+    const fromUrl = new URLSearchParams(window.location.search).get("site")?.trim() || "";
+    const saved = (localStorage.getItem("webtwin.activeSite") || "").trim();
+    const site = fromUrl || saved;
+    if (!site) return;
+    setSiteInput(site);
+    setSiteFilter(site);
+    localStorage.setItem("webtwin.activeSite", site);
+    setLoading(true);
+    Promise.all([fetchOverview(site), fetchSiteHealth(site)]).finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    fetchOverview(siteFilter)
-      .then(() => fetchSiteHealth(siteFilter))
-      .catch(() => {
-        if (active)
-          setData({
-            totals: { pageviews: 0, uniquePages: 0, domContentLoadedAvg: 0, loadAvg: 0 },
-            events: [],
-          });
-      });
+  const rows = useMemo(() => overview?.events ?? [], [overview]);
 
-    return () => {
-      active = false;
-    };
-  }, [siteFilter]);
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalized = siteInput.trim().toLowerCase();
+    if (!normalized) return;
 
-  const rows = useMemo(() => data?.events ?? [], [data]);
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set("site", normalized);
+    window.history.replaceState({}, "", nextUrl.toString());
 
-  const handleSendTest = async () => {
-    try {
-      setSending(true);
-      setLastStatus("idle");
-      const vitals = getBrowserTimings();
-      const res = await fetch("/api/rum", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "pageview",
-          site: siteFilter || window.location.hostname,
-          url: window.location.href,
-          referrer: document.referrer || null,
-          userAgent: navigator.userAgent,
-          viewport: { width: window.innerWidth, height: window.innerHeight },
-          vitals,
-          ts: Date.now(),
-        }),
-      });
-      if (!res.ok) throw new Error("send_failed");
-      await fetchOverview(siteFilter);
-      await fetchSiteHealth(siteFilter);
-      setLastStatus("sent");
-    } catch (err) {
-      setLastStatus("error");
-    } finally {
-      setSending(false);
-    }
+    await runScan(normalized);
   };
 
   return (
     <div className="flex flex-col gap-6">
       <header className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Overview</p>
-        <h1 className="mt-3 text-3xl font-semibold text-white">Twin health snapshot</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-300">
-          <span>Live metrics from RUM events (last 200 hits).</span>
-          {siteFilter && <span className="text-xs text-slate-400">Site: {siteFilter}</span>}
+        <h1 className="mt-3 text-3xl font-semibold text-white">Website Health Scan</h1>
+        <form className="mt-4 flex flex-wrap items-center gap-3" onSubmit={handleSubmit}>
+          <input
+            className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-white placeholder:text-slate-500"
+            value={siteInput}
+            onChange={(e) => setSiteInput(e.target.value)}
+            placeholder="Enter website URL or domain (e.g. hsetrainings.ge)"
+          />
           <button
-            type="button"
-            onClick={handleSendTest}
-            disabled={sending}
-            className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-              sending ? "bg-slate-800 text-slate-500" : "bg-emerald-500 text-slate-900 hover:bg-emerald-400"
-            }`}
+            type="submit"
+            className={`rounded-full px-4 py-2 text-xs font-semibold ${loading ? "bg-slate-700 text-slate-300" : "bg-emerald-500 text-slate-900 hover:bg-emerald-400"}`}
           >
-            {sending ? "Sending..." : "Send real test event"}
+            {loading ? "Scanning..." : "Scan Website"}
           </button>
-          {lastStatus === "sent" && <span className="text-xs text-emerald-300">Event sent.</span>}
-          {lastStatus === "error" && <span className="text-xs text-rose-300">Send failed.</span>}
-        </div>
+          {siteFilter && <span className="text-xs text-slate-400">Target: {siteFilter}</span>}
+        </form>
+        <p className="mt-3 text-sm text-slate-300">
+          Exact scanned page: <span className="font-medium text-white">{siteHealth?.scanUrl || "--"}</span>
+        </p>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Performance</p>
-          <div className="mt-3 text-2xl font-semibold text-white">
-            {formatScore(siteHealth?.lighthouse.performance ?? null)}
-          </div>
-          <p className="mt-2 text-xs text-slate-400">Google Lighthouse: Performance (mobile)</p>
+          <div className="mt-3 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.performance ?? null)}</div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Accessibility</p>
-          <div className="mt-3 text-2xl font-semibold text-white">
-            {formatScore(siteHealth?.lighthouse.accessibility ?? null)}
-          </div>
-          <p className="mt-2 text-xs text-slate-400">Google Lighthouse: Accessibility (mobile)</p>
+          <div className="mt-3 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.accessibility ?? null)}</div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Best practices</p>
-          <div className="mt-3 text-2xl font-semibold text-white">
-            {formatScore(siteHealth?.lighthouse.bestPractices ?? null)}
-          </div>
-          <p className="mt-2 text-xs text-slate-400">Google Lighthouse: Best Practices (mobile)</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Best Practices</p>
+          <div className="mt-3 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.bestPractices ?? null)}</div>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">SEO</p>
-          <div className="mt-3 text-2xl font-semibold text-white">
-            {formatScore(siteHealth?.lighthouse.seo ?? null)}
-          </div>
-          <p className="mt-2 text-xs text-slate-400">Google Lighthouse: SEO (mobile)</p>
+          <div className="mt-3 text-2xl font-semibold text-white">{formatScore(siteHealth?.lighthouse.seo ?? null)}</div>
         </div>
       </section>
-      <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Uptime / Downtime</p>
-        <div className="mt-3 flex flex-wrap items-center gap-4">
-          <p className="text-2xl font-semibold text-white">
-            {siteHealth?.uptime.isUp === null ? "--" : siteHealth?.uptime.isUp ? "UP" : "DOWN"}
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Load Time</p>
+          <p className="mt-2 text-2xl font-semibold text-white">
+            {siteHealth?.homepageLoadSec === null ? "--" : `${siteHealth.homepageLoadSec}s`}
           </p>
-          <p className="text-sm text-slate-300">
+          <p className="mt-2 text-sm text-slate-400">Estimated homepage load time (mobile synthetic scan).</p>
+        </div>
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Uptime / Downtime</p>
+          <p className="mt-2 text-2xl font-semibold text-white">
+            {siteHealth?.uptime.isUp === null ? "--" : siteHealth.uptime.isUp ? "UP" : "DOWN"}
+          </p>
+          <p className="mt-2 text-sm text-slate-400">
             {siteHealth?.uptime.responseMs
               ? `${siteHealth.uptime.responseMs}ms • HTTP ${siteHealth.uptime.statusCode ?? "-"}`
-              : "Live check"}
+              : "Live status check"}
           </p>
-          <p className="text-xs text-slate-500">Downtime history: coming next</p>
         </div>
       </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+          <h2 className="text-lg font-semibold text-white">Load Speed Recommendations</h2>
+          <ul className="mt-4 space-y-3 text-sm text-slate-300">
+            {(siteHealth?.recommendations.performance ?? []).length === 0 && (
+              <li className="text-slate-500">No major speed issues detected.</li>
+            )}
+            {(siteHealth?.recommendations.performance ?? []).map((rec) => (
+              <li key={rec.key} className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-white">{rec.title}</p>
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${impactClasses(rec.impact)}`}>
+                    {rec.impact}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">{rec.detail}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+          <h2 className="text-lg font-semibold text-white">SEO Problems & Recommendations</h2>
+          <ul className="mt-4 space-y-3 text-sm text-slate-300">
+            {(siteHealth?.recommendations.seo ?? []).length === 0 && (
+              <li className="text-slate-500">No critical SEO problems detected.</li>
+            )}
+            {(siteHealth?.recommendations.seo ?? []).map((rec) => (
+              <li key={rec.key} className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-white">{rec.title}</p>
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${impactClasses(rec.impact)}`}>
+                    {rec.impact}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">{rec.detail}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+          <h2 className="text-lg font-semibold text-white">UI/UX Problems & Recommendations</h2>
+          <ul className="mt-4 space-y-3 text-sm text-slate-300">
+            {(siteHealth?.recommendations.uiux ?? []).length === 0 && (
+              <li className="text-slate-500">No major UI/UX issues detected.</li>
+            )}
+            {(siteHealth?.recommendations.uiux ?? []).map((rec) => (
+              <li key={rec.key} className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-white">{rec.title}</p>
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${impactClasses(rec.impact)}`}>
+                    {rec.impact}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">{rec.detail}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
       {siteHealth?.lighthouseSource?.startsWith("unavailable") && (
-        <p className="text-xs text-amber-300">
-          Lighthouse scores unavailable now: {siteHealth.lighthouseSource}. Check `PAGESPEED_API_KEY` and redeploy.
-        </p>
+        <p className="text-xs text-amber-300">Scan warning: {siteHealth.lighthouseSource}</p>
       )}
 
       <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-        <h2 className="text-lg font-semibold text-white">Latest events</h2>
+        <h2 className="text-lg font-semibold text-white">Latest Captured Events</h2>
         <div className="mt-4 overflow-hidden rounded-2xl border border-slate-800">
           <table className="w-full text-left text-sm text-slate-300">
             <thead className="bg-slate-950 text-xs uppercase tracking-[0.2em] text-slate-500">
@@ -242,19 +263,15 @@ export default function OverviewPage() {
               {rows.length === 0 ? (
                 <tr className="bg-slate-900">
                   <td className="px-4 py-4 text-slate-400" colSpan={3}>
-                    No events yet. Add the snippet to start collecting data.
+                    No events yet. Install snippet on your website and run a scan.
                   </td>
                 </tr>
               ) : (
                 rows.map((event, idx) => (
                   <tr key={`${event.url ?? "event"}-${idx}`} className="bg-slate-900">
                     <td className="px-4 py-3 text-slate-200">{event.url ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      {formatNumber(((event.vitals as any)?.domContentLoaded ?? 0) / 1000, "s")}
-                    </td>
-                    <td className="px-4 py-3">
-                      {formatNumber(((event.vitals as any)?.load ?? 0) / 1000, "s")}
-                    </td>
+                    <td className="px-4 py-3">{formatNumber((event.vitals?.domContentLoaded ?? 0) / 1000, "s")}</td>
+                    <td className="px-4 py-3">{formatNumber((event.vitals?.load ?? 0) / 1000, "s")}</td>
                   </tr>
                 ))
               )}

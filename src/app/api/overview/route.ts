@@ -39,12 +39,12 @@ export async function GET(request: Request) {
   const uniquePages = new Set(normalizedEvents.map((event) => event.url).filter(Boolean)).size;
   const domContentLoadedAvg =
     normalizedEvents.length
-      ? normalizedEvents.reduce((acc, event) => acc + ((event.vitals as any)?.domContentLoaded ?? 0), 0) /
+      ? normalizedEvents.reduce((acc, event) => acc + (event.vitals?.domContentLoaded ?? 0), 0) /
         normalizedEvents.length
       : 0;
   const loadAvg =
     normalizedEvents.length
-      ? normalizedEvents.reduce((acc, event) => acc + ((event.vitals as any)?.load ?? 0), 0) /
+      ? normalizedEvents.reduce((acc, event) => acc + (event.vitals?.load ?? 0), 0) /
         normalizedEvents.length
       : 0;
 
