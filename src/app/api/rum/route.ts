@@ -3,14 +3,21 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "edge";
 
-export async function OPTIONS() {
+function corsHeaders(request: Request) {
+  const origin = request.headers.get("origin");
+  return {
+    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Credentials": "true",
+    Vary: "Origin",
+  };
+}
+
+export async function OPTIONS(request: Request) {
   return new NextResponse(null, {
     status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
+    headers: corsHeaders(request),
   });
 }
 
@@ -37,9 +44,7 @@ export async function POST(request: Request) {
   return NextResponse.json(
     { status: "ok" },
     {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: corsHeaders(request),
     }
   );
 }
