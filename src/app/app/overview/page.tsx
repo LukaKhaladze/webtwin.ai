@@ -24,6 +24,26 @@ function formatNumber(value: number, suffix = "") {
   return `${value.toFixed(1)}${suffix}`;
 }
 
+function getBrowserTimings() {
+  const navEntry = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+  if (navEntry) {
+    return {
+      domContentLoaded: Math.max(0, Math.round(navEntry.domContentLoadedEventEnd)),
+      load: Math.max(0, Math.round(navEntry.loadEventEnd)),
+    };
+  }
+
+  const timing = performance.timing;
+  if (!timing || !timing.navigationStart) {
+    return { domContentLoaded: 0, load: 0 };
+  }
+
+  return {
+    domContentLoaded: Math.max(0, timing.domContentLoadedEventEnd - timing.navigationStart),
+    load: Math.max(0, timing.loadEventEnd - timing.navigationStart),
+  };
+}
+
 export default function OverviewPage() {
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [sending, setSending] = useState(false);
@@ -65,6 +85,7 @@ export default function OverviewPage() {
     try {
       setSending(true);
       setLastStatus("idle");
+      const vitals = getBrowserTimings();
       const res = await fetch("/api/rum", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,7 +96,7 @@ export default function OverviewPage() {
           referrer: document.referrer || null,
           userAgent: navigator.userAgent,
           viewport: { width: window.innerWidth, height: window.innerHeight },
-          vitals: { domContentLoaded: 1200, load: 2100 },
+          vitals,
           ts: Date.now(),
         }),
       });
@@ -104,7 +125,7 @@ export default function OverviewPage() {
               sending ? "bg-slate-800 text-slate-500" : "bg-emerald-500 text-slate-900 hover:bg-emerald-400"
             }`}
           >
-            {sending ? "Sending..." : "Send test event"}
+            {sending ? "Sending..." : "Send real test event"}
           </button>
           {lastStatus === "sent" && <span className="text-xs text-emerald-300">Event sent.</span>}
           {lastStatus === "error" && <span className="text-xs text-rose-300">Send failed.</span>}
