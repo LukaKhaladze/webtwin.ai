@@ -16,6 +16,9 @@ async function fetchLighthouseScore(url: string, category: LighthouseCategory) {
   apiUrl.searchParams.set("url", url);
   apiUrl.searchParams.set("category", category);
   apiUrl.searchParams.set("strategy", "mobile");
+  if (process.env.PAGESPEED_API_KEY) {
+    apiUrl.searchParams.set("key", process.env.PAGESPEED_API_KEY);
+  }
 
   const res = await fetch(apiUrl.toString(), {
     cache: "no-store",
@@ -85,12 +88,18 @@ export async function GET(request: Request) {
     liveUptimeCheck(targetUrl),
   ]);
 
+  const lighthouseSource =
+    performance === null && seo === null && bestPractices === null
+      ? "unavailable (likely API quota/rate limit or blocked target)"
+      : "pagespeed";
+
   return NextResponse.json({
     lighthouse: {
       performance,
       seo,
       bestPractices,
     },
+    lighthouseSource,
     uptime,
   });
 }

@@ -26,6 +26,7 @@ type SiteHealthResponse = {
     seo: number | null;
     bestPractices: number | null;
   };
+  lighthouseSource?: string;
   uptime: {
     isUp: boolean | null;
     statusCode: number | null;
@@ -210,6 +211,11 @@ export default function OverviewPage() {
           <p className="mt-1 text-[11px] text-slate-500">Downtime history: coming next</p>
         </div>
       </section>
+      {siteHealth?.lighthouseSource?.startsWith("unavailable") && (
+        <p className="text-xs text-amber-300">
+          Lighthouse scores unavailable now. Add `PAGESPEED_API_KEY` in Vercel to reduce quota/rate-limit issues.
+        </p>
+      )}
 
       <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
         <h2 className="text-lg font-semibold text-white">Latest events</h2>
