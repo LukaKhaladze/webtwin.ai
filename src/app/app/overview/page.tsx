@@ -165,18 +165,18 @@ export default function OverviewPage() {
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Load Time</p>
           <p className="mt-2 text-2xl font-semibold text-white">
-            {siteHealth?.homepageLoadSec === null ? "--" : `${siteHealth.homepageLoadSec}s`}
+            {siteHealth?.homepageLoadSec == null ? "--" : `${siteHealth.homepageLoadSec}s`}
           </p>
           <p className="mt-2 text-sm text-slate-400">Estimated homepage load time (mobile synthetic scan).</p>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Uptime / Downtime</p>
           <p className="mt-2 text-2xl font-semibold text-white">
-            {siteHealth?.uptime.isUp === null ? "--" : siteHealth.uptime.isUp ? "UP" : "DOWN"}
+            {siteHealth?.uptime.isUp == null ? "--" : siteHealth.uptime.isUp ? "UP" : "DOWN"}
           </p>
           <p className="mt-2 text-sm text-slate-400">
-            {siteHealth?.uptime.responseMs
-              ? `${siteHealth.uptime.responseMs}ms • HTTP ${siteHealth.uptime.statusCode ?? "-"}`
+            {(siteHealth?.uptime.responseMs ?? 0) > 0
+              ? `${siteHealth?.uptime.responseMs}ms • HTTP ${siteHealth?.uptime.statusCode ?? "-"}`
               : "Live status check"}
           </p>
         </div>
