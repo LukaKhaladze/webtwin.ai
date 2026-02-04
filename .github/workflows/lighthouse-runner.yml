@@ -1,0 +1,39 @@
+name: Self-hosted Lighthouse Runner
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  lighthouse-mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm install --no-save lighthouse chrome-launcher
+      - run: npm run lighthouse:run
+        env:
+          TARGET_SITE: ${{ secrets.TARGET_SITE }}
+          LH_STRATEGY: mobile
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          LIGHTHOUSE_INGEST_TOKEN: ${{ secrets.LIGHTHOUSE_INGEST_TOKEN }}
+
+  lighthouse-desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm install --no-save lighthouse chrome-launcher
+      - run: npm run lighthouse:run
+        env:
+          TARGET_SITE: ${{ secrets.TARGET_SITE }}
+          LH_STRATEGY: desktop
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          LIGHTHOUSE_INGEST_TOKEN: ${{ secrets.LIGHTHOUSE_INGEST_TOKEN }}

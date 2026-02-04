@@ -1,28 +1,7 @@
 import { NextResponse } from "next/server";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "edge";
-
-type LighthouseCategoryKey = "performance" | "accessibility" | "seo" | "best-practices";
-
-type LighthouseAudit = {
-  title?: string;
-  description?: string;
-  score?: number | null;
-  scoreDisplayMode?: string;
-  displayValue?: string;
-  numericValue?: number;
-};
-
-type LighthouseResponse = {
-  lighthouseResult?: {
-    categories?: Partial<Record<LighthouseCategoryKey, { score?: number }>>;
-    audits?: Record<string, LighthouseAudit>;
-    finalUrl?: string;
-  };
-  error?: {
-    message?: string;
-  };
-};
 
 type Recommendation = {
   key: string;
@@ -31,168 +10,26 @@ type Recommendation = {
   impact: "high" | "medium" | "low";
 };
 
+type LighthouseRun = {
+  site: string;
+  strategy: "mobile" | "desktop";
+  performance: number | null;
+  accessibility: number | null;
+  seo: number | null;
+  best_practices: number | null;
+  homepage_load_sec: number | null;
+  final_url: string | null;
+  perf_recommendations: Recommendation[] | null;
+  seo_recommendations: Recommendation[] | null;
+  uiux_recommendations: Recommendation[] | null;
+  checked_at: string;
+};
+
 function normalizeSiteToUrl(site: string) {
   const trimmed = (site || "").trim();
   if (!trimmed) return "";
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
   return `https://${trimmed}`;
-}
-
-function scoreToPercent(score?: number) {
-  if (typeof score !== "number") return null;
-  return Math.round(score * 100);
-}
-
-function pickRecommendations(
-  audits: Record<string, LighthouseAudit> | undefined,
-  keys: string[],
-  fallbackImpact: Recommendation["impact"]
-): Recommendation[] {
-  if (!audits) return [];
-
-  return keys
-    .map((key) => {
-      const audit = audits[key];
-      if (!audit) return null;
-
-      const failed = audit.scoreDisplayMode !== "notApplicable" && typeof audit.score === "number" && audit.score < 0.9;
-      if (!failed) return null;
-
-      const impact: Recommendation["impact"] =
-        typeof audit.score === "number" && audit.score < 0.5
-          ? "high"
-          : typeof audit.score === "number" && audit.score < 0.75
-            ? "medium"
-            : fallbackImpact;
-
-      return {
-        key,
-        title: audit.title || key,
-        detail: audit.displayValue || audit.description || "Needs attention.",
-        impact,
-      };
-    })
-    .filter(Boolean) as Recommendation[];
-}
-
-async function fetchLighthouse(url: string) {
-  const apiUrl = new URL("https://www.googleapis.com/pagespeedonline/v5/runPagespeed");
-  apiUrl.searchParams.set("url", url);
-  apiUrl.searchParams.set("strategy", "mobile");
-  if (process.env.PAGESPEED_API_KEY) {
-    apiUrl.searchParams.set("key", process.env.PAGESPEED_API_KEY);
-  }
-
-  const res = await fetch(apiUrl.toString(), {
-    cache: "no-store",
-    headers: { "User-Agent": "WebTwinAI/1.0" },
-  });
-
-  if (!res.ok) {
-    return {
-      lighthouse: {
-        performance: null,
-        accessibility: null,
-        seo: null,
-        bestPractices: null,
-      },
-      scanUrl: url,
-      homepageLoadSec: null,
-      recommendations: {
-        performance: [] as Recommendation[],
-        seo: [] as Recommendation[],
-        uiux: [] as Recommendation[],
-      },
-      source: `unavailable (${res.status})`,
-    };
-  }
-
-  const json = (await res.json()) as LighthouseResponse;
-  if (json.error?.message) {
-    return {
-      lighthouse: {
-        performance: null,
-        accessibility: null,
-        seo: null,
-        bestPractices: null,
-      },
-      scanUrl: url,
-      homepageLoadSec: null,
-      recommendations: {
-        performance: [] as Recommendation[],
-        seo: [] as Recommendation[],
-        uiux: [] as Recommendation[],
-      },
-      source: `unavailable (${json.error.message})`,
-    };
-  }
-
-  const categories = json.lighthouseResult?.categories;
-  const audits = json.lighthouseResult?.audits;
-
-  const homepageLoadMs =
-    (typeof audits?.["largest-contentful-paint"]?.score === "number" &&
-      typeof audits?.["largest-contentful-paint"]?.numericValue === "number" &&
-      audits?.["largest-contentful-paint"]?.numericValue) ||
-    (typeof audits?.interactive?.numericValue === "number" && audits?.interactive?.numericValue) ||
-    null;
-
-  const perfRecommendations = pickRecommendations(
-    audits,
-    [
-      "render-blocking-resources",
-      "unused-javascript",
-      "unused-css-rules",
-      "server-response-time",
-      "offscreen-images",
-      "legacy-javascript",
-    ],
-    "medium"
-  );
-
-  const seoRecommendations = pickRecommendations(
-    audits,
-    [
-      "document-title",
-      "meta-description",
-      "link-text",
-      "crawlable-anchors",
-      "image-alt",
-      "robots-txt",
-      "hreflang",
-    ],
-    "medium"
-  );
-
-  const uiuxRecommendations = pickRecommendations(
-    audits,
-    [
-      "color-contrast",
-      "tap-targets",
-      "font-size",
-      "cumulative-layout-shift",
-      "is-crawlable",
-      "viewport",
-    ],
-    "medium"
-  );
-
-  return {
-    lighthouse: {
-      performance: scoreToPercent(categories?.performance?.score),
-      accessibility: scoreToPercent(categories?.accessibility?.score),
-      seo: scoreToPercent(categories?.seo?.score),
-      bestPractices: scoreToPercent(categories?.["best-practices"]?.score),
-    },
-    scanUrl: json.lighthouseResult?.finalUrl || url,
-    homepageLoadSec: typeof homepageLoadMs === "number" ? Number((homepageLoadMs / 1000).toFixed(2)) : null,
-    recommendations: {
-      performance: perfRecommendations.slice(0, 4),
-      seo: seoRecommendations.slice(0, 4),
-      uiux: uiuxRecommendations.slice(0, 4),
-    },
-    source: "pagespeed",
-  };
 }
 
 async function liveUptimeCheck(url: string) {
@@ -229,7 +66,7 @@ async function liveUptimeCheck(url: string) {
 
 export async function GET(request: Request) {
   const reqUrl = new URL(request.url);
-  const site = reqUrl.searchParams.get("site") || "";
+  const site = (reqUrl.searchParams.get("site") || "").trim().toLowerCase();
   const targetUrl = normalizeSiteToUrl(site);
 
   if (!targetUrl) {
@@ -243,14 +80,36 @@ export async function GET(request: Request) {
     });
   }
 
-  const [lighthouse, uptime] = await Promise.all([fetchLighthouse(targetUrl), liveUptimeCheck(targetUrl)]);
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase
+    .from("lighthouse_runs")
+    .select(
+      "site,strategy,performance,accessibility,seo,best_practices,homepage_load_sec,final_url,perf_recommendations,seo_recommendations,uiux_recommendations,checked_at"
+    )
+    .eq("site", site)
+    .eq("strategy", "mobile")
+    .order("checked_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const latestRun = (data as LighthouseRun | null) ?? null;
+  const uptime = await liveUptimeCheck(targetUrl);
 
   return NextResponse.json({
-    lighthouse: lighthouse.lighthouse,
-    lighthouseSource: lighthouse.source,
-    scanUrl: lighthouse.scanUrl,
-    homepageLoadSec: lighthouse.homepageLoadSec,
-    recommendations: lighthouse.recommendations,
+    lighthouse: {
+      performance: latestRun?.performance ?? null,
+      accessibility: latestRun?.accessibility ?? null,
+      seo: latestRun?.seo ?? null,
+      bestPractices: latestRun?.best_practices ?? null,
+    },
+    lighthouseSource: latestRun ? "self-hosted-lighthouse" : "unavailable (no self-hosted run yet)",
+    scanUrl: latestRun?.final_url ?? targetUrl,
+    homepageLoadSec: latestRun?.homepage_load_sec ?? null,
+    recommendations: {
+      performance: latestRun?.perf_recommendations ?? [],
+      seo: latestRun?.seo_recommendations ?? [],
+      uiux: latestRun?.uiux_recommendations ?? [],
+    },
     uptime,
   });
 }
