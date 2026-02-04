@@ -20,9 +20,28 @@ type OverviewResponse = {
   events: OverviewEvent[];
 };
 
+type SiteHealthResponse = {
+  lighthouse: {
+    performance: number | null;
+    seo: number | null;
+    bestPractices: number | null;
+  };
+  uptime: {
+    isUp: boolean | null;
+    statusCode: number | null;
+    responseMs: number | null;
+    checkedAt: string | null;
+  };
+};
+
 function formatNumber(value: number, suffix = "") {
   if (!Number.isFinite(value)) return "-";
   return `${value.toFixed(1)}${suffix}`;
+}
+
+function formatScore(value: number | null) {
+  if (value === null) return "--";
+  return `${value}/100`;
 }
 
 function getBrowserTimings() {
@@ -50,6 +69,7 @@ export default function OverviewPage() {
   const [sending, setSending] = useState(false);
   const [lastStatus, setLastStatus] = useState<"idle" | "sent" | "error">("idle");
   const [siteFilter, setSiteFilter] = useState("");
+  const [siteHealth, setSiteHealth] = useState<SiteHealthResponse | null>(null);
 
   const fetchOverview = (site = siteFilter) => {
     const query = site ? `?site=${encodeURIComponent(site)}` : "";
@@ -57,6 +77,15 @@ export default function OverviewPage() {
       .then((res) => res.json())
       .then((json) => {
         setData(json as OverviewResponse);
+      });
+  };
+
+  const fetchSiteHealth = (site = siteFilter) => {
+    const query = site ? `?site=${encodeURIComponent(site)}` : "";
+    return fetch(`/api/site-health${query}`)
+      .then((res) => res.json())
+      .then((json) => {
+        setSiteHealth(json as SiteHealthResponse);
       });
   };
 
@@ -77,6 +106,7 @@ export default function OverviewPage() {
   useEffect(() => {
     let active = true;
     fetchOverview(siteFilter)
+      .then(() => fetchSiteHealth(siteFilter))
       .catch(() => {
         if (active)
           setData({
@@ -89,13 +119,6 @@ export default function OverviewPage() {
       active = false;
     };
   }, [siteFilter]);
-
-  const totals = data?.totals ?? {
-    pageviews: 0,
-    uniquePages: 0,
-    domContentLoadedAvg: 0,
-    loadAvg: 0,
-  };
 
   const rows = useMemo(() => data?.events ?? [], [data]);
 
@@ -120,6 +143,7 @@ export default function OverviewPage() {
       });
       if (!res.ok) throw new Error("send_failed");
       await fetchOverview(siteFilter);
+      await fetchSiteHealth(siteFilter);
       setLastStatus("sent");
     } catch (err) {
       setLastStatus("error");
@@ -153,24 +177,37 @@ export default function OverviewPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Pageviews</p>
-          <div className="mt-3 text-2xl font-semibold text-white">{totals.pageviews}</div>
-        </div>
-        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Unique pages</p>
-          <div className="mt-3 text-2xl font-semibold text-white">{totals.uniquePages}</div>
-        </div>
-        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">DCL (avg)</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Performance</p>
           <div className="mt-3 text-2xl font-semibold text-white">
-            {formatNumber(totals.domContentLoadedAvg / 1000, "s")}
+            {formatScore(siteHealth?.lighthouse.performance ?? null)}
           </div>
+          <p className="mt-2 text-xs text-slate-400">Lighthouse mobile score</p>
         </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Load (avg)</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">SEO</p>
           <div className="mt-3 text-2xl font-semibold text-white">
-            {formatNumber(totals.loadAvg / 1000, "s")}
+            {formatScore(siteHealth?.lighthouse.seo ?? null)}
           </div>
+          <p className="mt-2 text-xs text-slate-400">Lighthouse mobile score</p>
+        </div>
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Best practices</p>
+          <div className="mt-3 text-2xl font-semibold text-white">
+            {formatScore(siteHealth?.lighthouse.bestPractices ?? null)}
+          </div>
+          <p className="mt-2 text-xs text-slate-400">Lighthouse mobile score</p>
+        </div>
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Uptime</p>
+          <div className="mt-3 text-2xl font-semibold text-white">
+            {siteHealth?.uptime.isUp === null ? "--" : siteHealth?.uptime.isUp ? "UP" : "DOWN"}
+          </div>
+          <p className="mt-2 text-xs text-slate-400">
+            {siteHealth?.uptime.responseMs
+              ? `${siteHealth.uptime.responseMs}ms • HTTP ${siteHealth.uptime.statusCode ?? "-"}`
+              : "Live check"}
+          </p>
+          <p className="mt-1 text-[11px] text-slate-500">Downtime history: coming next</p>
         </div>
       </section>
 
