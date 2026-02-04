@@ -25,6 +25,21 @@ type LighthouseRun = {
   checked_at: string;
 };
 
+type StrategySnapshot = {
+  performance: number | null;
+  accessibility: number | null;
+  seo: number | null;
+  bestPractices: number | null;
+  homepageLoadSec: number | null;
+  finalUrl: string | null;
+  checkedAt: string | null;
+  recommendations: {
+    performance: Recommendation[];
+    seo: Recommendation[];
+    uiux: Recommendation[];
+  };
+};
+
 function normalizeSiteToUrl(site: string) {
   const trimmed = (site || "").trim();
   if (!trimmed) return "";
@@ -106,29 +121,56 @@ export async function GET(request: Request) {
       "site,strategy,performance,accessibility,seo,best_practices,homepage_load_sec,final_url,perf_recommendations,seo_recommendations,uiux_recommendations,checked_at"
     )
     .in("site", siteKeys.length ? siteKeys : [site])
-    .eq("strategy", "mobile")
     .order("checked_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(20);
 
-  const latestRun = (data as LighthouseRun | null) ?? null;
+  const runs = (data as LighthouseRun[] | null) ?? [];
+  const latestMobile = runs.find((row) => row.strategy === "mobile") ?? null;
+  const latestDesktop = runs.find((row) => row.strategy === "desktop") ?? null;
+
+  const mapRun = (run: LighthouseRun | null): StrategySnapshot => ({
+    performance: run?.performance ?? null,
+    accessibility: run?.accessibility ?? null,
+    seo: run?.seo ?? null,
+    bestPractices: run?.best_practices ?? null,
+    homepageLoadSec: run?.homepage_load_sec ?? null,
+    finalUrl: run?.final_url ?? null,
+    checkedAt: run?.checked_at ?? null,
+    recommendations: {
+      performance: run?.perf_recommendations ?? [],
+      seo: run?.seo_recommendations ?? [],
+      uiux: run?.uiux_recommendations ?? [],
+    },
+  });
+
+  const mobile = mapRun(latestMobile);
+  const desktop = mapRun(latestDesktop);
+  const hasAnyRun = Boolean(latestMobile || latestDesktop);
+  const selectedRecommendations = latestMobile ? mobile.recommendations : desktop.recommendations;
   const uptime = await liveUptimeCheck(targetUrl);
 
   return NextResponse.json({
     lighthouse: {
-      performance: latestRun?.performance ?? null,
-      accessibility: latestRun?.accessibility ?? null,
-      seo: latestRun?.seo ?? null,
-      bestPractices: latestRun?.best_practices ?? null,
+      mobile: {
+        performance: mobile.performance,
+        accessibility: mobile.accessibility,
+        seo: mobile.seo,
+        bestPractices: mobile.bestPractices,
+      },
+      desktop: {
+        performance: desktop.performance,
+        accessibility: desktop.accessibility,
+        seo: desktop.seo,
+        bestPractices: desktop.bestPractices,
+      },
     },
-    lighthouseSource: latestRun ? "self-hosted-lighthouse" : "unavailable (no self-hosted run yet)",
-    scanUrl: latestRun?.final_url ?? targetUrl,
-    homepageLoadSec: latestRun?.homepage_load_sec ?? null,
-    recommendations: {
-      performance: latestRun?.perf_recommendations ?? [],
-      seo: latestRun?.seo_recommendations ?? [],
-      uiux: latestRun?.uiux_recommendations ?? [],
+    lighthouseSource: hasAnyRun ? "self-hosted-lighthouse" : "unavailable (no self-hosted run yet)",
+    scanUrl: mobile.finalUrl ?? desktop.finalUrl ?? targetUrl,
+    homepageLoadSec: {
+      mobile: mobile.homepageLoadSec,
+      desktop: desktop.homepageLoadSec,
     },
+    recommendations: selectedRecommendations,
     uptime,
   });
 }

@@ -19,14 +19,30 @@ const { default: lighthouse } = await import("lighthouse");
 const chrome = await launch({ chromeFlags: ["--headless", "--no-sandbox", "--disable-dev-shm-usage"] });
 
 try {
-  const result = await lighthouse(url, {
-    port: chrome.port,
-    output: "json",
-    logLevel: "error",
-    onlyCategories: ["performance", "accessibility", "best-practices", "seo"],
-    emulatedFormFactor: strategy === "desktop" ? "desktop" : "mobile",
-    screenEmulation: strategy === "desktop" ? { mobile: false, width: 1350, height: 940, deviceScaleFactor: 1, disabled: false } : undefined,
-  });
+  const isDesktop = strategy === "desktop";
+  const runLighthouse = (overrides = {}) =>
+    lighthouse(url, {
+      port: chrome.port,
+      output: "json",
+      logLevel: "error",
+      onlyCategories: ["performance", "accessibility", "best-practices", "seo"],
+      emulatedFormFactor: isDesktop ? "desktop" : "mobile",
+      screenEmulation: isDesktop
+        ? { mobile: false, width: 1350, height: 940, deviceScaleFactor: 1, disabled: false }
+        : undefined,
+      ...overrides,
+    });
+
+  let result;
+  try {
+    result = await runLighthouse();
+  } catch (firstErr) {
+    if (!isDesktop) throw firstErr;
+    result = await runLighthouse({
+      emulatedFormFactor: "desktop",
+      screenEmulation: undefined,
+    });
+  }
 
   const lhr = result?.lhr;
   if (!lhr) throw new Error("No Lighthouse result");
