@@ -45,16 +45,25 @@ Add:
 
 - `LIGHTHOUSE_INGEST_TOKEN` (random long secret)
 - `SUPABASE_SERVICE_ROLE_KEY` (recommended)
+- `GITHUB_ACTIONS_TOKEN` (PAT with Actions write + Contents read on this repo)
+- `GITHUB_REPO_OWNER` (example: `LukaKhaladze`)
+- `GITHUB_REPO_NAME` (example: `webtwin.ai`)
+- `GITHUB_WORKFLOW_FILE` (optional, default: `lighthouse-runner.yml`)
+- `GITHUB_WORKFLOW_REF` (optional, default: `main`)
 - existing Supabase vars already in use
 
 ## 3) GitHub Secrets (for workflow)
 In repo settings -> Secrets and variables -> Actions, add:
 
-- `TARGET_SITE` (example: `https://hsetrainings.ge`)
 - `APP_BASE_URL` (example: `https://webtwinai.vercel.app`)
 - `LIGHTHOUSE_INGEST_TOKEN` (same as Vercel)
 
+Optional for scheduled runs without user input:
+- Repository variable `DEFAULT_TARGET_SITE` (example: `https://hsetrainings.ge`)
+
 ## 4) Run Workflow
-Go to Actions -> `Self-hosted Lighthouse Runner` -> `Run workflow`.
+Go to Actions -> `Self-hosted Lighthouse Runner` -> `Run workflow` and set input `site`.
+
+Or from app: Overview page -> enter site -> `Scan Website` (dispatches workflow).
 
 After first successful run, `/app/overview?site=...` will show Lighthouse data from self-hosted scans.

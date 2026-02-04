@@ -83,6 +83,7 @@ export default function OverviewPage() {
   const [siteHealth, setSiteHealth] = useState<SiteHealthResponse | null>(null);
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [scanStatus, setScanStatus] = useState<string>("");
 
   const fetchOverview = (site: string) => {
     const query = site ? `?site=${encodeURIComponent(site)}` : "";
@@ -98,12 +99,25 @@ export default function OverviewPage() {
       .then((json) => setSiteHealth(json as SiteHealthResponse));
   };
 
-  const runScan = async (site: string) => {
+  const runScan = async (site: string, queueLighthouse = false) => {
     if (!site) return;
     setLoading(true);
     setSiteFilter(site);
     localStorage.setItem("webtwin.activeSite", site);
     try {
+      if (queueLighthouse) {
+        const dispatchRes = await fetch("/api/lighthouse/dispatch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ site, strategy: "both" }),
+        });
+        const dispatchJson = (await dispatchRes.json().catch(() => ({}))) as { error?: string; status?: string };
+        if (!dispatchRes.ok) {
+          setScanStatus(dispatchJson.error || "Failed to queue Lighthouse scan.");
+        } else {
+          setScanStatus("Lighthouse scan queued (mobile + desktop). Refresh in 1-2 minutes.");
+        }
+      }
       await Promise.all([fetchOverview(site), fetchSiteHealth(site)]);
     } finally {
       setLoading(false);
@@ -138,7 +152,7 @@ export default function OverviewPage() {
     nextUrl.searchParams.set("site", normalized);
     window.history.replaceState({}, "", nextUrl.toString());
 
-    await runScan(normalized);
+    await runScan(normalized, true);
   };
 
   return (
@@ -164,6 +178,7 @@ export default function OverviewPage() {
         <p className="mt-3 text-sm text-slate-300">
           Exact scanned page: <span className="font-medium text-white">{siteHealth?.scanUrl || "--"}</span>
         </p>
+        {scanStatus && <p className="mt-2 text-xs text-emerald-300">{scanStatus}</p>}
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
