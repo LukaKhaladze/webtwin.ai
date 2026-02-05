@@ -264,7 +264,32 @@ async function getAiRecommendations(input: ReturnType<typeof summarizeContent>, 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
-  const prompt = `You are an expert UI/UX + SEO auditor. Analyze the provided page summary and return JSON ONLY.\n\nReturn JSON with shape:\n{\n  \"summary\": string,\n  \"score\": number (0-100),\n  \"recommendations\": [\n    {\"id\": string, \"title\": string, \"detail\": string, \"impact\": \"good\"|\"bad\"|\"improve\", \"category\": \"uiux\"|\"seo\"}\n  ]\n}\n\nRules:\n- Focus mostly on UI/UX (at least 60% of items UI/UX) and the rest SEO.\n- 6 to 10 total recommendations.\n- Each detail max 240 chars.\n- Be practical and specific.\n\nPAGE URL: ${targetUrl}\nTITLE: ${input.title}\nMETA DESCRIPTION: ${input.metaDescription}\nH1: ${input.h1}\nH2s: ${input.headings.join(\" | \")}\nLINKS (sample): ${input.links.join(\" | \")}\nTEXT SAMPLE: ${input.textSample}\n`;
+  const prompt = [
+    "You are an expert UI/UX + SEO auditor. Analyze the provided page summary and return JSON ONLY.",
+    "",
+    "Return JSON with shape:",
+    "{",
+    '  "summary": string,',
+    '  "score": number (0-100),',
+    '  "recommendations": [',
+    '    {"id": string, "title": string, "detail": string, "impact": "good"|"bad"|"improve", "category": "uiux"|"seo"}',
+    "  ]",
+    "}",
+    "",
+    "Rules:",
+    "- Focus mostly on UI/UX (at least 60% of items UI/UX) and the rest SEO.",
+    "- 6 to 10 total recommendations.",
+    "- Each detail max 240 chars.",
+    "- Be practical and specific.",
+    "",
+    `PAGE URL: ${targetUrl}`,
+    `TITLE: ${input.title}`,
+    `META DESCRIPTION: ${input.metaDescription}`,
+    `H1: ${input.h1}`,
+    `H2s: ${input.headings.join(" | ")}`,
+    `LINKS (sample): ${input.links.join(" | ")}`,
+    `TEXT SAMPLE: ${input.textSample}`,
+  ].join("\n");
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
