@@ -304,7 +304,7 @@ async function getAiRecommendations(input: ReturnType<typeof summarizeContent>, 
       input: [
         {
           role: "user",
-          content: [{ type: "text", text: prompt }],
+          content: [{ type: "input_text", text: prompt }],
         },
       ],
       max_output_tokens: 800,
