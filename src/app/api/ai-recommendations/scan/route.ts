@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type Recommendation = {
   id: string;
@@ -40,7 +41,7 @@ function normalizeUrl(input: string) {
 }
 
 function buildSnapshotUrl(targetUrl: string, width: number, height: number, isMobile: boolean) {
-  const accessKey = process.env.SCREENSHOTONE_ACCESS_KEY || "";
+  const accessKey = process.env.SCREENSHOTONE_ACCESS_KEY || process.env.SCREENSHOTONE_SECRET_KEY || "";
   const baseUrl = process.env.SCREENSHOTONE_BASE_URL || "https://api.screenshotone.com/take";
 
   if (!accessKey) return null;
@@ -370,5 +371,9 @@ export async function POST(request: Request) {
     checks,
   };
 
-  return NextResponse.json(result);
+  return NextResponse.json(result, {
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
 }

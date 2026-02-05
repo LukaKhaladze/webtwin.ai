@@ -147,6 +147,11 @@ export default function AiRecommendationsPage() {
           <p className="mt-3 text-xs text-slate-300">
             {scan?.summary || "Scan a page to generate a structured executive summary of the UI and UX findings."}
           </p>
+          {!scan?.aiUsed && (
+            <p className="mt-2 text-[11px] text-amber-300">
+              AI feedback is off. Add `OPENAI_API_KEY` in Vercel to enable real AI recommendations.
+            </p>
+          )}
         </div>
 
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
@@ -258,6 +263,19 @@ export default function AiRecommendationsPage() {
               </div>
             )}
           </div>
+          {scan?.snapshots[snapshotKey] && (
+            <div className="mt-3 text-[11px] text-slate-400">
+              Snapshot URL:{" "}
+              <a
+                className="underline underline-offset-2"
+                href={scan.snapshots[snapshotKey] ?? undefined}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open image
+              </a>
+            </div>
+          )}
         </div>
 
       </section>
