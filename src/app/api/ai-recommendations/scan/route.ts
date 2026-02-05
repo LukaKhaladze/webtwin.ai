@@ -17,6 +17,7 @@ type ScanResult = {
   score: number;
   summary: string;
   aiUsed?: boolean;
+  aiError?: string | null;
   recommendations: Recommendation[];
   snapshots: {
     mobile: string | null;
@@ -263,7 +264,7 @@ function summarizeContent(html: string) {
 
 async function getAiRecommendations(input: ReturnType<typeof summarizeContent>, targetUrl: string) {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) return { data: null, error: "missing_api_key" };
 
   const prompt = [
     "You are an expert UI/UX + SEO auditor. Analyze the provided page summary and return JSON ONLY.",
@@ -311,15 +312,18 @@ async function getAiRecommendations(input: ReturnType<typeof summarizeContent>, 
     }),
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    const text = await response.text();
+    return { data: null, error: `openai_http_${response.status}` + (text ? `: ${text.slice(0, 200)}` : "") };
+  }
   const data = (await response.json()) as { output?: Array<{ content?: Array<{ text?: string }> }> };
   const text = data.output?.[0]?.content?.[0]?.text || "";
-  if (!text) return null;
+  if (!text) return { data: null, error: "empty_response" };
 
   try {
-    return JSON.parse(text) as { summary: string; score: number; recommendations: Recommendation[] };
+    return { data: JSON.parse(text) as { summary: string; score: number; recommendations: Recommendation[] }, error: null };
   } catch {
-    return null;
+    return { data: null, error: "invalid_json" };
   }
 }
 
@@ -350,10 +354,11 @@ export async function POST(request: Request) {
   const checks = extractChecks(html);
   const extracted = summarizeContent(html);
   const ai = await getAiRecommendations(extracted, targetUrl);
-  const recommendations = ai?.recommendations?.length ? ai.recommendations : buildRecommendations(checks);
-  const score = Number.isFinite(ai?.score) ? Math.round(ai!.score) : computeScore(checks);
+  const aiData = ai.data;
+  const recommendations = aiData?.recommendations?.length ? aiData.recommendations : buildRecommendations(checks);
+  const score = Number.isFinite(aiData?.score) ? Math.round(aiData!.score) : computeScore(checks);
   const summary =
-    ai?.summary ||
+    aiData?.summary ||
     "Baseline structure analyzed from live HTML. Prioritize missing metadata, responsive setup, and accessibility fixes for immediate gains.";
 
   const result: ScanResult = {
@@ -361,7 +366,8 @@ export async function POST(request: Request) {
     fetchedUrl,
     score,
     summary,
-    aiUsed: Boolean(ai),
+    aiUsed: Boolean(aiData),
+    aiError: ai.error || null,
     recommendations,
     snapshots: {
       mobile: buildSnapshotUrl(targetUrl, 390, 844, true),

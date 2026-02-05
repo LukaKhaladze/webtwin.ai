@@ -16,6 +16,7 @@ type ScanResult = {
   score: number;
   summary: string;
   aiUsed?: boolean;
+  aiError?: string | null;
   recommendations: Recommendation[];
   snapshots: {
     mobile: string | null;
@@ -150,6 +151,11 @@ export default function AiRecommendationsPage() {
           {!scan?.aiUsed && (
             <p className="mt-2 text-[11px] text-amber-300">
               AI feedback is off. Add `OPENAI_API_KEY` in Vercel to enable real AI recommendations.
+            </p>
+          )}
+          {scan?.aiError && (
+            <p className="mt-2 text-[11px] text-rose-300">
+              AI error: {scan.aiError}
             </p>
           )}
         </div>
