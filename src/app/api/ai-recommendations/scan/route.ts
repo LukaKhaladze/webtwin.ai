@@ -62,7 +62,6 @@ function buildSnapshotUrl(targetUrl: string, width: number, height: number, isMo
   });
 
   if (isMobile) {
-    params.set("is_mobile", "true");
     params.set(
       "user_agent",
       "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
@@ -307,6 +306,37 @@ async function getAiRecommendations(input: ReturnType<typeof summarizeContent>, 
           content: [{ type: "input_text", text: prompt }],
         },
       ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "ai_recommendations",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              summary: { type: "string" },
+              score: { type: "number" },
+              recommendations: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    id: { type: "string" },
+                    title: { type: "string" },
+                    detail: { type: "string" },
+                    impact: { type: "string", enum: ["good", "bad", "improve"] },
+                    category: { type: "string", enum: ["uiux", "seo"] },
+                  },
+                  required: ["id", "title", "detail", "impact", "category"],
+                },
+              },
+            },
+            required: ["summary", "score", "recommendations"],
+          },
+        },
+      },
       max_output_tokens: 800,
       temperature: 0.4,
     }),
@@ -316,13 +346,23 @@ async function getAiRecommendations(input: ReturnType<typeof summarizeContent>, 
     const text = await response.text();
     return { data: null, error: `openai_http_${response.status}` + (text ? `: ${text.slice(0, 200)}` : "") };
   }
-  const data = (await response.json()) as { output?: Array<{ content?: Array<{ text?: string }> }> };
+  const data = (await response.json()) as {
+    output?: Array<{ content?: Array<{ text?: string }> }>;
+  };
   const text = data.output?.[0]?.content?.[0]?.text || "";
   if (!text) return { data: null, error: "empty_response" };
 
   try {
     return { data: JSON.parse(text) as { summary: string; score: number; recommendations: Recommendation[] }, error: null };
   } catch {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return { data: JSON.parse(match[0]) as { summary: string; score: number; recommendations: Recommendation[] }, error: null };
+      } catch {
+        return { data: null, error: "invalid_json" };
+      }
+    }
     return { data: null, error: "invalid_json" };
   }
 }
