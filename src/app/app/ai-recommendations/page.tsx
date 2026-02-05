@@ -54,6 +54,21 @@ export default function AiRecommendationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [device, setDevice] = useState<"phone" | "desktop">("phone");
   const snapshotKey = device === "phone" ? "mobile" : "desktop";
+  const pins = useMemo(() => {
+    if (!scan) return [];
+    const positions = [
+      { x: 18, y: 22 },
+      { x: 62, y: 28 },
+      { x: 42, y: 46 },
+      { x: 25, y: 64 },
+      { x: 72, y: 62 },
+      { x: 35, y: 78 },
+    ];
+    return scan.recommendations
+      .filter((rec) => rec.impact !== "good")
+      .slice(0, positions.length)
+      .map((rec, index) => ({ ...rec, ...positions[index] }));
+  }, [scan]);
 
   const filtered = useMemo(() => {
     if (!scan) return [];
@@ -121,7 +136,28 @@ export default function AiRecommendationsPage() {
         {error && <p className="mt-2 text-xs text-rose-300">{error}</p>}
       </header>
 
-      <section className="grid gap-6 lg:grid-cols-[1.3fr_1.7fr]">
+      <section className="grid gap-6 lg:grid-cols-[1.35fr_1.65fr]">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Score</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-3xl font-semibold text-white">{score || "--"}</span>
+                <span className="text-sm text-slate-400">/ 100</span>
+              </div>
+            </div>
+            <button className="h-fit rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" type="button">
+              Talk to expert
+            </button>
+          </div>
+          <div className="mt-3 h-2 w-full rounded-full bg-slate-800">
+            <div className="h-2 rounded-full bg-amber-400" style={{ width: `${Math.min(100, score || 0)}%` }} />
+          </div>
+          <p className="mt-4 text-xs text-slate-300">
+            {scan?.summary || "Scan a page to generate a structured executive summary of the UI and UX findings."}
+          </p>
+        </div>
+
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <div className="flex flex-wrap items-center gap-2">
             {["all", "good", "bad", "improve"].map((tab) => (
@@ -171,29 +207,6 @@ export default function AiRecommendationsPage() {
               ))
             )}
           </div>
-        </div>
-
-        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Score</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-3xl font-semibold text-white">{score || "--"}</span>
-                <span className="text-sm text-slate-400">/ 100</span>
-              </div>
-            </div>
-            <button className="h-fit rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" type="button">
-              Talk to expert
-            </button>
-          </div>
-          <div className="mt-3 h-2 w-full rounded-full bg-slate-800">
-            <div className="h-2 rounded-full bg-amber-400" style={{ width: `${Math.min(100, score || 0)}%` }} />
-          </div>
-          <p className="mt-4 text-xs text-slate-300">
-            {scan?.summary || "Scan a page to generate a structured executive summary of the UI and UX findings."}
-          </p>
-        </div>
-
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
             <span>Snapshot</span>
@@ -223,8 +236,23 @@ export default function AiRecommendationsPage() {
           </div>
           <div className="mt-4 rounded-3xl border border-slate-800 bg-slate-950 p-4">
             {scan?.snapshots[snapshotKey] ? (
-              <div className="max-h-[640px] w-full overflow-auto rounded-2xl border border-slate-800 bg-slate-950">
+              <div className="relative max-h-[700px] w-full overflow-auto rounded-2xl border border-slate-800 bg-slate-950">
                 <img src={scan.snapshots[snapshotKey] ?? ""} alt={`${device} snapshot`} className="w-full object-contain" />
+                {pins.map((pin) => (
+                  <div
+                    key={pin.id}
+                    className="group absolute"
+                    style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-900 bg-rose-500 text-xs font-semibold text-white shadow-lg">
+                      !
+                    </div>
+                    <div className="pointer-events-none absolute left-10 top-1/2 z-10 w-56 -translate-y-1/2 rounded-2xl border border-slate-800 bg-slate-950 p-3 text-xs text-slate-200 opacity-0 shadow-xl transition group-hover:opacity-100">
+                      <p className="text-sm font-semibold text-white">{pin.title}</p>
+                      <p className="mt-1 text-slate-400">{pin.detail}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="aspect-[16/9] w-full rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-4">
