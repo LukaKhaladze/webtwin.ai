@@ -7,7 +7,7 @@ type Recommendation = {
   title: string;
   detail: string;
   impact: "good" | "bad" | "improve";
-  category: "uiux";
+  category: "uiux" | "seo";
 };
 
 type ScanResult = {
@@ -102,7 +102,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Missing page title",
       detail: "Add a descriptive <title> tag to improve SEO and clarity in browser tabs.",
       impact: "bad",
-      category: "uiux",
+      category: "seo",
     });
   }
 
@@ -112,7 +112,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Meta description needs improvement",
       detail: "Provide a 50-160 character description to improve search snippets and CTR.",
       impact: "improve",
-      category: "uiux",
+      category: "seo",
     });
   }
 
@@ -132,7 +132,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Missing main H1",
       detail: "Add a clear H1 headline to define the primary page topic.",
       impact: "improve",
-      category: "uiux",
+      category: "seo",
     });
   } else if (checks.h1Count > 1) {
     recs.push({
@@ -140,7 +140,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Multiple H1 tags",
       detail: "Use a single H1 to keep page hierarchy consistent for SEO and accessibility.",
       impact: "improve",
-      category: "uiux",
+      category: "seo",
     });
   }
 
@@ -150,7 +150,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Image alt text missing",
       detail: `${checks.imagesWithoutAlt} images are missing alt text. Add alt attributes for accessibility and SEO.`,
       impact: "improve",
-      category: "uiux",
+      category: "seo",
     });
   }
 
@@ -180,7 +180,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Clear page title",
       detail: "Page title is present and readable in browser tabs.",
       impact: "good",
-      category: "uiux",
+      category: "seo",
     });
   }
 
@@ -190,7 +190,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Single main headline",
       detail: "Exactly one H1 found, which helps structure the page for users.",
       impact: "good",
-      category: "uiux",
+      category: "seo",
     });
   }
 
