@@ -9,35 +9,25 @@ type Recommendation = {
   impact: "good" | "bad" | "improve";
 };
 
-const demoRecommendations: Recommendation[] = [
-  {
-    id: "sticky-header",
-    title: "Sticky Header Utility",
-    detail:
-      "Essential mobile actions (search, profile, cart) are placed in the top-right corner, aligning with thumb reach patterns.",
-    impact: "good",
-  },
-  {
-    id: "language-switcher",
-    title: "Language Switcher Clarity",
-    detail:
-      "Language flags are small and lack labels. Increase tap target size to at least 44px to reduce mis-taps.",
-    impact: "improve",
-  },
-  {
-    id: "product-actions",
-    title: "Product Interaction Targets",
-    detail:
-      "Cart and wishlist icons are too small on mobile. Increase size or place in a clear bottom action bar.",
-    impact: "bad",
-  },
-  {
-    id: "contrast",
-    title: "Button Contrast",
-    detail: "Primary CTA blends into background. Increase contrast or add outline to improve visibility.",
-    impact: "improve",
-  },
-];
+type ScanResult = {
+  targetUrl: string;
+  fetchedUrl: string | null;
+  score: number;
+  summary: string;
+  recommendations: Recommendation[];
+  snapshots: {
+    mobile: string | null;
+    desktop: string | null;
+  };
+  checks: {
+    title: boolean;
+    metaDescription: boolean;
+    viewport: boolean;
+    h1Count: number;
+    imagesWithoutAlt: number;
+    emptyLinks: number;
+  };
+};
 
 const impactStyles: Record<Recommendation["impact"], string> = {
   good: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
@@ -54,18 +44,39 @@ const impactLabel: Record<Recommendation["impact"], string> = {
 export default function AiRecommendationsPage() {
   const [url, setUrl] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "good" | "bad" | "improve">("all");
-  const [score, setScore] = useState(58);
+  const [score, setScore] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [scan, setScan] = useState<ScanResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
-    if (activeFilter === "all") return demoRecommendations;
-    return demoRecommendations.filter((rec) => rec.impact === activeFilter);
-  }, [activeFilter]);
+    if (!scan) return [];
+    if (activeFilter === "all") return scan.recommendations;
+    return scan.recommendations.filter((rec) => rec.impact === activeFilter);
+  }, [activeFilter, scan]);
 
-  const handleScan = () => {
-    const now = new Date();
-    setLastUpdated(now.toLocaleTimeString());
-    setScore(54 + Math.floor(Math.random() * 12));
+  const handleScan = async () => {
+    if (!url.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/ai-recommendations/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const json = (await res.json()) as ScanResult & { error?: string };
+      if (!res.ok) {
+        setError(json.error || "Scan failed.");
+        return;
+      }
+      setScan(json);
+      setScore(json.score);
+      setLastUpdated(new Date().toLocaleTimeString());
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -88,10 +99,11 @@ export default function AiRecommendationsPage() {
             className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-emerald-400"
             onClick={handleScan}
           >
-            Scan Page
+            {loading ? "Scanning..." : "Scan Page"}
           </button>
           {lastUpdated && <span className="text-xs text-slate-400">Last update: {lastUpdated}</span>}
         </div>
+        {error && <p className="mt-2 text-xs text-rose-300">{error}</p>}
       </header>
 
       <section className="grid gap-6 lg:grid-cols-[1.6fr_1.2fr_1fr]">
@@ -132,9 +144,15 @@ export default function AiRecommendationsPage() {
             <span className="rounded-full border border-slate-700 px-2 py-1">Phone</span>
           </div>
           <div className="mt-4 rounded-3xl border border-slate-800 bg-slate-950 p-4">
-            <div className="aspect-[9/16] w-full rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-4">
-              <div className="h-full w-full rounded-xl border border-slate-800 bg-[radial-gradient(circle_at_top,#1f2937,transparent_70%)]" />
-            </div>
+            {scan?.snapshots.mobile ? (
+              <div className="aspect-[9/16] w-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+                <img src={scan.snapshots.mobile} alt="Mobile snapshot" className="h-full w-full object-cover" />
+              </div>
+            ) : (
+              <div className="aspect-[9/16] w-full rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-4">
+                <div className="h-full w-full rounded-xl border border-slate-800 bg-[radial-gradient(circle_at_top,#1f2937,transparent_70%)]" />
+              </div>
+            )}
           </div>
           <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
             <span className="rounded-full border border-slate-700 px-2 py-1">Desktop</span>
@@ -149,19 +167,19 @@ export default function AiRecommendationsPage() {
           <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Score</p>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-3xl font-semibold text-white">{score}</span>
-              <span className="text-sm text-slate-400">/ 100</span>
-            </div>
-            <div className="mt-3 h-2 w-full rounded-full bg-slate-800">
-              <div className="h-2 rounded-full bg-amber-400" style={{ width: `${score}%` }} />
-            </div>
+            <span className="text-3xl font-semibold text-white">{score || "--"}</span>
+            <span className="text-sm text-slate-400">/ 100</span>
           </div>
+          <div className="mt-3 h-2 w-full rounded-full bg-slate-800">
+            <div className="h-2 rounded-full bg-amber-400" style={{ width: `${Math.min(100, score || 0)}%` }} />
+          </div>
+        </div>
 
           <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Executive Summary</p>
             <p className="mt-3 text-xs text-slate-300">
-              The interface is usable but needs polish in mobile navigation and action visibility. Prioritize tap target size and
-              visual hierarchy before A/B testing deeper layout changes.
+              {scan?.summary ||
+                "Scan a page to generate a structured executive summary of the UI and UX findings."}
             </p>
             <button className="mt-4 w-full rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" type="button">
               Talk to expert
@@ -172,4 +190,3 @@ export default function AiRecommendationsPage() {
     </div>
   );
 }
-
