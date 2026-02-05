@@ -55,6 +55,7 @@ function buildSnapshotUrl(targetUrl: string, width: number, height: number, isMo
     block_ads: "true",
     block_trackers: "true",
     cache: "false",
+    full_page: "true",
   });
 
   if (isMobile) {

@@ -52,8 +52,8 @@ export default function AiRecommendationsPage() {
   const [loading, setLoading] = useState(false);
   const [scan, setScan] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [device, setDevice] = useState<"phone" | "desktop" | "tablet">("phone");
-  const snapshotKey = device === "phone" ? "mobile" : device;
+  const [device, setDevice] = useState<"phone" | "desktop">("phone");
+  const snapshotKey = device === "phone" ? "mobile" : "desktop";
 
   const filtered = useMemo(() => {
     if (!scan) return [];
@@ -87,7 +87,7 @@ export default function AiRecommendationsPage() {
     }
   };
 
-  const setDeviceAndRefresh = (next: "phone" | "desktop" | "tablet") => {
+  const setDeviceAndRefresh = (next: "phone" | "desktop") => {
     setDevice(next);
     if (scan?.targetUrl || url.trim()) {
       void handleScan();
@@ -100,7 +100,7 @@ export default function AiRecommendationsPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">AI Recommendations</p>
         <h1 className="mt-3 text-3xl font-semibold text-white">Scan a page and get UI/UX feedback</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          Paste a URL to generate a snapshot plus UI/UX and SEO recommendations for mobile, tablet, and desktop layouts.
+          Paste a URL to generate a full-page snapshot plus UI/UX and SEO recommendations for mobile and desktop layouts.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <input
@@ -121,7 +121,7 @@ export default function AiRecommendationsPage() {
         {error && <p className="mt-2 text-xs text-rose-300">{error}</p>}
       </header>
 
-      <section className="grid gap-6 lg:grid-cols-[1.2fr_1.8fr_1fr]">
+      <section className="grid gap-6 lg:grid-cols-[1.3fr_1.7fr]">
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <div className="flex flex-wrap items-center gap-2">
             {["all", "good", "bad", "improve"].map((tab) => (
@@ -174,14 +174,57 @@ export default function AiRecommendationsPage() {
         </div>
 
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Score</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-3xl font-semibold text-white">{score || "--"}</span>
+                <span className="text-sm text-slate-400">/ 100</span>
+              </div>
+            </div>
+            <button className="h-fit rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" type="button">
+              Talk to expert
+            </button>
+          </div>
+          <div className="mt-3 h-2 w-full rounded-full bg-slate-800">
+            <div className="h-2 rounded-full bg-amber-400" style={{ width: `${Math.min(100, score || 0)}%` }} />
+          </div>
+          <p className="mt-4 text-xs text-slate-300">
+            {scan?.summary || "Scan a page to generate a structured executive summary of the UI and UX findings."}
+          </p>
+        </div>
+
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
             <span>Snapshot</span>
-            <span className="rounded-full border border-slate-700 px-2 py-1">{device === "phone" ? "Phone" : device === "desktop" ? "Desktop" : "Tablet"}</span>
+            <div className="flex items-center gap-2">
+              <button
+                className={`rounded-full border px-2 py-1 ${device === "desktop" ? "border-emerald-400 text-emerald-300" : "border-slate-700 text-slate-300"}`}
+                type="button"
+                onClick={() => setDeviceAndRefresh("desktop")}
+              >
+                Desktop
+              </button>
+              <button
+                className={`rounded-full border px-2 py-1 ${device === "phone" ? "border-emerald-400 text-emerald-300" : "border-slate-700 text-slate-300"}`}
+                type="button"
+                onClick={() => setDeviceAndRefresh("phone")}
+              >
+                Mobile
+              </button>
+              <button
+                className="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300"
+                type="button"
+                onClick={handleScan}
+              >
+                Refresh
+              </button>
+            </div>
           </div>
           <div className="mt-4 rounded-3xl border border-slate-800 bg-slate-950 p-4">
             {scan?.snapshots[snapshotKey] ? (
-              <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
-                <img src={scan.snapshots[snapshotKey] ?? ""} alt={`${device} snapshot`} className="h-full w-full object-cover" />
+              <div className="max-h-[640px] w-full overflow-auto rounded-2xl border border-slate-800 bg-slate-950">
+                <img src={scan.snapshots[snapshotKey] ?? ""} alt={`${device} snapshot`} className="w-full object-contain" />
               </div>
             ) : (
               <div className="aspect-[16/9] w-full rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-4">
@@ -190,61 +233,8 @@ export default function AiRecommendationsPage() {
               </div>
             )}
           </div>
-          <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
-            <button
-              className={`rounded-full border px-2 py-1 ${device === "desktop" ? "border-emerald-400 text-emerald-300" : "border-slate-700 text-slate-300"}`}
-              type="button"
-              onClick={() => setDeviceAndRefresh("desktop")}
-            >
-              Desktop
-            </button>
-            <button
-              className={`rounded-full border px-2 py-1 ${device === "tablet" ? "border-emerald-400 text-emerald-300" : "border-slate-700 text-slate-300"}`}
-              type="button"
-              onClick={() => setDeviceAndRefresh("tablet")}
-            >
-              Tablet
-            </button>
-            <button
-              className={`rounded-full border px-2 py-1 ${device === "phone" ? "border-emerald-400 text-emerald-300" : "border-slate-700 text-slate-300"}`}
-              type="button"
-              onClick={() => setDeviceAndRefresh("phone")}
-            >
-              Phone
-            </button>
-            <button
-              className="ml-auto rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300"
-              type="button"
-              onClick={handleScan}
-            >
-              Refresh
-            </button>
-          </div>
         </div>
 
-        <aside className="flex flex-col gap-4">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Score</p>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-3xl font-semibold text-white">{score || "--"}</span>
-              <span className="text-sm text-slate-400">/ 100</span>
-            </div>
-            <div className="mt-3 h-2 w-full rounded-full bg-slate-800">
-              <div className="h-2 rounded-full bg-amber-400" style={{ width: `${Math.min(100, score || 0)}%` }} />
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Executive Summary</p>
-            <p className="mt-3 text-xs text-slate-300">
-              {scan?.summary ||
-                "Scan a page to generate a structured executive summary of the UI and UX findings."}
-            </p>
-            <button className="mt-4 w-full rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" type="button">
-              Talk to expert
-            </button>
-          </div>
-        </aside>
       </section>
     </div>
   );
