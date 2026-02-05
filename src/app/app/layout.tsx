@@ -3,6 +3,7 @@ import Link from "next/link";
 const navItems = [
   { href: "/app/overview", label: "Overview" },
   { href: "/app/twin-map", label: "Twin Map" },
+  { href: "/app/ai-recommendations", label: "AI Recommendations" },
   { href: "/app/insights", label: "Insights" },
   { href: "/app/simulator", label: "Simulator" },
   { href: "/app/reports", label: "Reports" },
