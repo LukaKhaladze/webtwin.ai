@@ -15,6 +15,7 @@ type ScanResult = {
   fetchedUrl: string | null;
   score: number;
   summary: string;
+  aiUsed?: boolean;
   recommendations: Recommendation[];
   snapshots: {
     mobile: string | null;
@@ -224,6 +225,78 @@ function computeScore(checks: ReturnType<typeof extractChecks>) {
   return Math.max(30, Math.min(100, Math.round(score)));
 }
 
+function summarizeContent(html: string) {
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const title = titleMatch?.[1]?.trim() ?? "";
+  const h1 = (html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || "").replace(/<[^>]+>/g, "").trim();
+  const metaDescMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["'][^>]*>/i);
+  const metaDescription = metaDescMatch?.[1]?.trim() ?? "";
+  const headings = (html.match(/<h2[^>]*>([\s\S]*?)<\/h2>/gi) || [])
+    .slice(0, 6)
+    .map((h) => h.replace(/<[^>]+>/g, "").trim())
+    .filter(Boolean);
+  const links = (html.match(/<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi) || [])
+    .slice(0, 10)
+    .map((tag) => {
+      const href = tag.match(/href=["']([^"']+)["']/i)?.[1] ?? "";
+      const text = tag.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+      return href || text ? `${text || "link"} -> ${href}` : null;
+    })
+    .filter(Boolean);
+  const textSample = (html.replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim())
+    .slice(0, 1200);
+
+  return {
+    title,
+    h1,
+    metaDescription,
+    headings,
+    links,
+    textSample,
+  };
+}
+
+async function getAiRecommendations(input: ReturnType<typeof summarizeContent>, targetUrl: string) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const prompt = `You are an expert UI/UX + SEO auditor. Analyze the provided page summary and return JSON ONLY.\n\nReturn JSON with shape:\n{\n  \"summary\": string,\n  \"score\": number (0-100),\n  \"recommendations\": [\n    {\"id\": string, \"title\": string, \"detail\": string, \"impact\": \"good\"|\"bad\"|\"improve\", \"category\": \"uiux\"|\"seo\"}\n  ]\n}\n\nRules:\n- Focus mostly on UI/UX (at least 60% of items UI/UX) and the rest SEO.\n- 6 to 10 total recommendations.\n- Each detail max 240 chars.\n- Be practical and specific.\n\nPAGE URL: ${targetUrl}\nTITLE: ${input.title}\nMETA DESCRIPTION: ${input.metaDescription}\nH1: ${input.h1}\nH2s: ${input.headings.join(\" | \")}\nLINKS (sample): ${input.links.join(\" | \")}\nTEXT SAMPLE: ${input.textSample}\n`;
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      input: [
+        {
+          role: "user",
+          content: [{ type: "text", text: prompt }],
+        },
+      ],
+      max_output_tokens: 800,
+      temperature: 0.4,
+    }),
+  });
+
+  if (!response.ok) return null;
+  const data = (await response.json()) as { output?: Array<{ content?: Array<{ text?: string }> }> };
+  const text = data.output?.[0]?.content?.[0]?.text || "";
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text) as { summary: string; score: number; recommendations: Recommendation[] };
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { url?: string };
   const targetUrl = normalizeUrl(body.url || "");
@@ -249,16 +322,20 @@ export async function POST(request: Request) {
   }
 
   const checks = extractChecks(html);
-  const recommendations = buildRecommendations(checks);
-  const score = computeScore(checks);
-
-  const summary = "Baseline structure analyzed from live HTML. Prioritize missing metadata, responsive setup, and accessibility fixes for immediate gains.";
+  const extracted = summarizeContent(html);
+  const ai = await getAiRecommendations(extracted, targetUrl);
+  const recommendations = ai?.recommendations?.length ? ai.recommendations : buildRecommendations(checks);
+  const score = Number.isFinite(ai?.score) ? Math.round(ai!.score) : computeScore(checks);
+  const summary =
+    ai?.summary ||
+    "Baseline structure analyzed from live HTML. Prioritize missing metadata, responsive setup, and accessibility fixes for immediate gains.";
 
   const result: ScanResult = {
     targetUrl,
     fetchedUrl,
     score,
     summary,
+    aiUsed: Boolean(ai),
     recommendations,
     snapshots: {
       mobile: buildSnapshotUrl(targetUrl, 390, 844, true),

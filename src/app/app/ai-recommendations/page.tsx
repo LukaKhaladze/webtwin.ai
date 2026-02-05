@@ -15,6 +15,7 @@ type ScanResult = {
   fetchedUrl: string | null;
   score: number;
   summary: string;
+  aiUsed?: boolean;
   recommendations: Recommendation[];
   snapshots: {
     mobile: string | null;
@@ -137,22 +138,13 @@ export default function AiRecommendationsPage() {
 
       <section className="grid gap-6 lg:grid-cols-[1.35fr_1.65fr]">
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 lg:col-span-2">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Score</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-3xl font-semibold text-white">{score || "--"}</span>
-                <span className="text-sm text-slate-400">/ 100</span>
-              </div>
-            </div>
-            <button className="h-fit rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" type="button">
-              Talk to expert
-            </button>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Executive Summary</p>
+            <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase ${scan?.aiUsed ? "bg-emerald-500/15 text-emerald-200" : "bg-slate-800 text-slate-300"}`}>
+              {scan?.aiUsed ? "AI-generated" : "Rule-based"}
+            </span>
           </div>
-          <div className="mt-3 h-2 w-full rounded-full bg-slate-800">
-            <div className="h-2 rounded-full bg-amber-400" style={{ width: `${Math.min(100, score || 0)}%` }} />
-          </div>
-          <p className="mt-4 text-xs text-slate-300">
+          <p className="mt-3 text-xs text-slate-300">
             {scan?.summary || "Scan a page to generate a structured executive summary of the UI and UX findings."}
           </p>
         </div>
