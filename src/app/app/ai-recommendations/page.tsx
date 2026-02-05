@@ -242,9 +242,12 @@ export default function AiRecommendationsPage() {
             {scan?.snapshots[snapshotKey] ? (
               <div className="relative max-h-[700px] w-full overflow-auto rounded-2xl border border-slate-800 bg-slate-950">
                 <img
-                  src={`${scan.snapshots[snapshotKey] ?? ""}${(scan.snapshots[snapshotKey] || "").includes("?") ? "&" : "?"}v=${scanVersion}-${device}`}
+                  src={`/api/ai-recommendations/snapshot?url=${encodeURIComponent(
+                    `${scan.snapshots[snapshotKey] ?? ""}${(scan.snapshots[snapshotKey] || "").includes("?") ? "&" : "?"}v=${scanVersion}-${device}`
+                  )}`}
                   alt={`${device} snapshot`}
                   className="w-full object-contain"
+                  referrerPolicy="no-referrer"
                 />
                 {pins.map((pin) => (
                   <div
