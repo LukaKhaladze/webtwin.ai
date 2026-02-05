@@ -7,6 +7,7 @@ type Recommendation = {
   title: string;
   detail: string;
   impact: "good" | "bad" | "improve";
+  category: "uiux";
 };
 
 type ScanResult = {
@@ -18,6 +19,7 @@ type ScanResult = {
   snapshots: {
     mobile: string | null;
     desktop: string | null;
+    tablet: string | null;
   };
   checks: {
     title: boolean;
@@ -100,6 +102,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Missing page title",
       detail: "Add a descriptive <title> tag to improve SEO and clarity in browser tabs.",
       impact: "bad",
+      category: "uiux",
     });
   }
 
@@ -109,6 +112,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Meta description needs improvement",
       detail: "Provide a 50-160 character description to improve search snippets and CTR.",
       impact: "improve",
+      category: "uiux",
     });
   }
 
@@ -118,6 +122,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Missing viewport meta tag",
       detail: "Add a responsive viewport meta tag to ensure proper mobile scaling.",
       impact: "bad",
+      category: "uiux",
     });
   }
 
@@ -127,6 +132,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Missing main H1",
       detail: "Add a clear H1 headline to define the primary page topic.",
       impact: "improve",
+      category: "uiux",
     });
   } else if (checks.h1Count > 1) {
     recs.push({
@@ -134,6 +140,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Multiple H1 tags",
       detail: "Use a single H1 to keep page hierarchy consistent for SEO and accessibility.",
       impact: "improve",
+      category: "uiux",
     });
   }
 
@@ -143,6 +150,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Image alt text missing",
       detail: `${checks.imagesWithoutAlt} images are missing alt text. Add alt attributes for accessibility and SEO.`,
       impact: "improve",
+      category: "uiux",
     });
   }
 
@@ -152,6 +160,37 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Links without descriptive text",
       detail: `${checks.emptyLinks} links have no text. Add visible labels for accessibility.`,
       impact: "improve",
+      category: "uiux",
+    });
+  }
+
+  if (checks.viewport) {
+    recs.push({
+      id: "viewport-good",
+      title: "Responsive viewport detected",
+      detail: "Viewport meta tag is set correctly for mobile scaling.",
+      impact: "good",
+      category: "uiux",
+    });
+  }
+
+  if (checks.title) {
+    recs.push({
+      id: "title-good",
+      title: "Clear page title",
+      detail: "Page title is present and readable in browser tabs.",
+      impact: "good",
+      category: "uiux",
+    });
+  }
+
+  if (checks.h1Count === 1) {
+    recs.push({
+      id: "single-h1",
+      title: "Single main headline",
+      detail: "Exactly one H1 found, which helps structure the page for users.",
+      impact: "good",
+      category: "uiux",
     });
   }
 
@@ -161,6 +200,7 @@ function buildRecommendations(checks: ReturnType<typeof extractChecks>) {
       title: "Solid baseline structure",
       detail: "Core structural checks look good. Focus on content hierarchy and performance tuning.",
       impact: "good",
+      category: "uiux",
     });
   }
 
@@ -218,10 +258,10 @@ export async function POST(request: Request) {
     snapshots: {
       mobile: buildSnapshotUrl(targetUrl, 390, 844, true),
       desktop: buildSnapshotUrl(targetUrl, 1440, 900, false),
+      tablet: buildSnapshotUrl(targetUrl, 820, 1180, false),
     },
     checks,
   };
 
   return NextResponse.json(result);
 }
-

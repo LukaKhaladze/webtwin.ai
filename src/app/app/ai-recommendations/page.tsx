@@ -7,6 +7,7 @@ type Recommendation = {
   title: string;
   detail: string;
   impact: "good" | "bad" | "improve";
+  category: "uiux";
 };
 
 type ScanResult = {
@@ -18,6 +19,7 @@ type ScanResult = {
   snapshots: {
     mobile: string | null;
     desktop: string | null;
+    tablet: string | null;
   };
   checks: {
     title: boolean;
@@ -49,11 +51,14 @@ export default function AiRecommendationsPage() {
   const [loading, setLoading] = useState(false);
   const [scan, setScan] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [device, setDevice] = useState<"phone" | "desktop" | "tablet">("phone");
+  const snapshotKey = device === "phone" ? "mobile" : device;
 
   const filtered = useMemo(() => {
     if (!scan) return [];
-    if (activeFilter === "all") return scan.recommendations;
-    return scan.recommendations.filter((rec) => rec.impact === activeFilter);
+    const uiux = scan.recommendations.filter((rec) => rec.category === "uiux");
+    if (activeFilter === "all") return uiux;
+    return uiux.filter((rec) => rec.impact === activeFilter);
   }, [activeFilter, scan]);
 
   const handleScan = async () => {
@@ -141,12 +146,12 @@ export default function AiRecommendationsPage() {
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
             <span>Snapshot</span>
-            <span className="rounded-full border border-slate-700 px-2 py-1">Phone</span>
+            <span className="rounded-full border border-slate-700 px-2 py-1">{device === "phone" ? "Phone" : device === "desktop" ? "Desktop" : "Tablet"}</span>
           </div>
           <div className="mt-4 rounded-3xl border border-slate-800 bg-slate-950 p-4">
-            {scan?.snapshots.mobile ? (
+            {scan?.snapshots[snapshotKey] ? (
               <div className="aspect-[9/16] w-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
-                <img src={scan.snapshots.mobile} alt="Mobile snapshot" className="h-full w-full object-cover" />
+                <img src={scan.snapshots[snapshotKey] ?? ""} alt={`${device} snapshot`} className="h-full w-full object-cover" />
               </div>
             ) : (
               <div className="aspect-[9/16] w-full rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-4">
@@ -155,9 +160,32 @@ export default function AiRecommendationsPage() {
             )}
           </div>
           <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
-            <span className="rounded-full border border-slate-700 px-2 py-1">Desktop</span>
-            <span className="rounded-full border border-slate-700 px-2 py-1">Tablet</span>
-            <button className="ml-auto rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300" type="button">
+            <button
+              className={`rounded-full border px-2 py-1 ${device === "desktop" ? "border-emerald-400 text-emerald-300" : "border-slate-700 text-slate-300"}`}
+              type="button"
+              onClick={() => setDevice("desktop")}
+            >
+              Desktop
+            </button>
+            <button
+              className={`rounded-full border px-2 py-1 ${device === "tablet" ? "border-emerald-400 text-emerald-300" : "border-slate-700 text-slate-300"}`}
+              type="button"
+              onClick={() => setDevice("tablet")}
+            >
+              Tablet
+            </button>
+            <button
+              className={`rounded-full border px-2 py-1 ${device === "phone" ? "border-emerald-400 text-emerald-300" : "border-slate-700 text-slate-300"}`}
+              type="button"
+              onClick={() => setDevice("phone")}
+            >
+              Phone
+            </button>
+            <button
+              className="ml-auto rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300"
+              type="button"
+              onClick={handleScan}
+            >
               Refresh
             </button>
           </div>
