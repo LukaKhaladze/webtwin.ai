@@ -57,6 +57,7 @@ export default function AiRecommendationsPage() {
   const [device, setDevice] = useState<"phone" | "desktop">("phone");
   const snapshotKey = device === "phone" ? "mobile" : "desktop";
   const [scanVersion, setScanVersion] = useState(0);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const pins = useMemo(() => {
     if (!scan) return [];
     const positions = [
@@ -101,6 +102,7 @@ export default function AiRecommendationsPage() {
       setScore(json.score);
       setLastUpdated(new Date().toLocaleTimeString());
       setScanVersion((prev) => prev + 1);
+      setSnapshotError(null);
     } finally {
       setLoading(false);
     }
@@ -242,12 +244,11 @@ export default function AiRecommendationsPage() {
             {scan?.snapshots[snapshotKey] ? (
               <div className="relative max-h-[700px] w-full overflow-auto rounded-2xl border border-slate-800 bg-slate-950">
                 <img
-                  src={`/api/ai-recommendations/snapshot?url=${encodeURIComponent(
-                    `${scan.snapshots[snapshotKey] ?? ""}${(scan.snapshots[snapshotKey] || "").includes("?") ? "&" : "?"}v=${scanVersion}-${device}`
-                  )}`}
+                  src={`${scan.snapshots[snapshotKey] ?? ""}${(scan.snapshots[snapshotKey] || "").includes("?") ? "&" : "?"}v=${scanVersion}-${device}`}
                   alt={`${device} snapshot`}
                   className="w-full object-contain"
                   referrerPolicy="no-referrer"
+                  onError={() => setSnapshotError("Snapshot failed to load in preview. Open the image link below to verify.")}
                 />
                 {pins.map((pin) => (
                   <div
@@ -272,6 +273,7 @@ export default function AiRecommendationsPage() {
               </div>
             )}
           </div>
+          {snapshotError && <p className="mt-3 text-[11px] text-rose-300">{snapshotError}</p>}
           {scan?.snapshots[snapshotKey] && (
             <div className="mt-3 text-[11px] text-slate-400">
               Snapshot URL:{" "}

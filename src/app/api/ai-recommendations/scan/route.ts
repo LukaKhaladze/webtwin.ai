@@ -309,33 +309,31 @@ async function getAiRecommendations(input: ReturnType<typeof summarizeContent>, 
       text: {
         format: {
           type: "json_schema",
-          json_schema: {
-            name: "ai_recommendations",
-            strict: true,
-            schema: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                summary: { type: "string" },
-                score: { type: "number" },
-                recommendations: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    additionalProperties: false,
-                    properties: {
-                      id: { type: "string" },
-                      title: { type: "string" },
-                      detail: { type: "string" },
-                      impact: { type: "string", enum: ["good", "bad", "improve"] },
-                      category: { type: "string", enum: ["uiux", "seo"] },
-                    },
-                    required: ["id", "title", "detail", "impact", "category"],
+          name: "ai_recommendations",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              summary: { type: "string" },
+              score: { type: "number" },
+              recommendations: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    id: { type: "string" },
+                    title: { type: "string" },
+                    detail: { type: "string" },
+                    impact: { type: "string", enum: ["good", "bad", "improve"] },
+                    category: { type: "string", enum: ["uiux", "seo"] },
                   },
+                  required: ["id", "title", "detail", "impact", "category"],
                 },
               },
-              required: ["summary", "score", "recommendations"],
             },
+            required: ["summary", "score", "recommendations"],
           },
         },
       },
