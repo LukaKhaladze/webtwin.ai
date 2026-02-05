@@ -46,7 +46,7 @@ const impactLabel: Record<Recommendation["impact"], string> = {
 export default function AiRecommendationsPage() {
   const [url, setUrl] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "good" | "bad" | "improve">("all");
-  const [activeCategory, setActiveCategory] = useState<"all" | "uiux" | "seo">("all");
+  const [activeCategory, setActiveCategory] = useState<"all" | "uiux" | "seo">("uiux");
   const [score, setScore] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,6 +54,7 @@ export default function AiRecommendationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [device, setDevice] = useState<"phone" | "desktop">("phone");
   const snapshotKey = device === "phone" ? "mobile" : "desktop";
+  const [scanVersion, setScanVersion] = useState(0);
   const pins = useMemo(() => {
     if (!scan) return [];
     const positions = [
@@ -97,16 +98,14 @@ export default function AiRecommendationsPage() {
       setScan(json);
       setScore(json.score);
       setLastUpdated(new Date().toLocaleTimeString());
+      setScanVersion((prev) => prev + 1);
     } finally {
       setLoading(false);
     }
   };
 
-  const setDeviceAndRefresh = (next: "phone" | "desktop") => {
+  const setDeviceOnly = (next: "phone" | "desktop") => {
     setDevice(next);
-    if (scan?.targetUrl || url.trim()) {
-      void handleScan();
-    }
   };
 
   return (
@@ -174,7 +173,7 @@ export default function AiRecommendationsPage() {
             ))}
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
-            {["all", "uiux", "seo"].map((cat) => (
+            {["uiux", "seo", "all"].map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -216,14 +215,14 @@ export default function AiRecommendationsPage() {
               <button
                 className={`rounded-full border px-2 py-1 ${device === "desktop" ? "border-emerald-400 text-emerald-300" : "border-slate-700 text-slate-300"}`}
                 type="button"
-                onClick={() => setDeviceAndRefresh("desktop")}
+                onClick={() => setDeviceOnly("desktop")}
               >
                 Desktop
               </button>
               <button
                 className={`rounded-full border px-2 py-1 ${device === "phone" ? "border-emerald-400 text-emerald-300" : "border-slate-700 text-slate-300"}`}
                 type="button"
-                onClick={() => setDeviceAndRefresh("phone")}
+                onClick={() => setDeviceOnly("phone")}
               >
                 Mobile
               </button>
@@ -239,7 +238,11 @@ export default function AiRecommendationsPage() {
           <div className="mt-4 rounded-3xl border border-slate-800 bg-slate-950 p-4">
             {scan?.snapshots[snapshotKey] ? (
               <div className="relative max-h-[700px] w-full overflow-auto rounded-2xl border border-slate-800 bg-slate-950">
-                <img src={scan.snapshots[snapshotKey] ?? ""} alt={`${device} snapshot`} className="w-full object-contain" />
+                <img
+                  src={`${scan.snapshots[snapshotKey] ?? ""}${(scan.snapshots[snapshotKey] || "").includes("?") ? "&" : "?"}v=${scanVersion}-${device}`}
+                  alt={`${device} snapshot`}
+                  className="w-full object-contain"
+                />
                 {pins.map((pin) => (
                   <div
                     key={pin.id}
